@@ -27,6 +27,7 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
+        "CAMERA",
         "NOTIFICATIONS",
         "VIBRATE"
       ],

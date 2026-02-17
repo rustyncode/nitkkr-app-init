@@ -25,6 +25,10 @@ async function ensureDownloadDir() {
 // ─── Sanitize filename for filesystem ───────────────────────
 
 function sanitizeFileName(name) {
+  if (!name || typeof name !== 'string') {
+    console.warn('[Download] Invalid fileName:', name);
+    return 'unknown_file';
+  }
   return name
     .replace(/[^a-zA-Z0-9._()-]/g, "_")
     .replace(/__+/g, "_")
@@ -106,17 +110,17 @@ async function downloadFile(downloadUrl, fileName, onProgress = null) {
       {},
       onProgress
         ? (downloadProgress) => {
-            onProgress({
-              totalBytesWritten: downloadProgress.totalBytesWritten,
-              totalBytesExpectedToWrite:
-                downloadProgress.totalBytesExpectedToWrite,
-              progress:
-                downloadProgress.totalBytesExpectedToWrite > 0
-                  ? downloadProgress.totalBytesWritten /
-                    downloadProgress.totalBytesExpectedToWrite
-                  : 0,
-            });
-          }
+          onProgress({
+            totalBytesWritten: downloadProgress.totalBytesWritten,
+            totalBytesExpectedToWrite:
+              downloadProgress.totalBytesExpectedToWrite,
+            progress:
+              downloadProgress.totalBytesExpectedToWrite > 0
+                ? downloadProgress.totalBytesWritten /
+                downloadProgress.totalBytesExpectedToWrite
+                : 0,
+          });
+        }
         : undefined,
     );
 
@@ -163,7 +167,7 @@ async function openFile(filePath, fileName) {
       // Launch the file directly with an ACTION_VIEW intent
       // This opens the system "Open with" picker or the default PDF viewer
       await IntentLauncher.startActivityAsync(
-        IntentLauncher.ActivityAction.VIEW,
+        "android.intent.action.VIEW",
         {
           data: contentUri,
           flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
@@ -268,7 +272,7 @@ async function downloadAndOpen(downloadUrl, fileName, onProgress = null) {
     Alert.alert(
       "Download Failed",
       result.error ||
-        "Could not download the file. Please check your internet connection and try again.",
+      "Could not download the file. Please check your internet connection and try again.",
     );
     return false;
   }

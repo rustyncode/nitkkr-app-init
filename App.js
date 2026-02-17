@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, Text, Platform } from "react-native";
+import { StyleSheet, View, Text, Platform, LogBox } from "react-native";
+
+// Suppress expected warnings in Expo Go
+LogBox.ignoreLogs([
+  "expo-notifications",
+  "Encountered two children with the same key",
+]);
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
@@ -118,10 +124,10 @@ function MainAppContent() {
   };
 
   return (
-    <View style={[styles.outerContainer, { backgroundColor: colors.primaryDark }]}>
+    <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
       <StatusBar
-        style="light"
-        backgroundColor={colors.primaryDark}
+        style={isDark ? "light" : "dark"}
+        backgroundColor={colors.primary} // Keep primary for header continuity
         translucent={false}
       />
 

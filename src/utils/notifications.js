@@ -31,7 +31,6 @@ try {
   if (_isAvailable && Notifications) {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
         shouldShowBanner: true,
@@ -211,7 +210,13 @@ async function notifyNewPapers(count, department) {
  * @returns {Promise<string|null>}
  */
 async function notifyNewCollegeAlerts(count, firstTitle) {
-  if (count <= 0) return null;
+  // Gracefully handle expo-notifications not being available in Expo Go
+  if (!_isAvailable || !Notifications || count <= 0) {
+    if (!_isAvailable || !Notifications) {
+      console.log('[Notifications] Running in Expo Go or module unavailable - skipping college alerts notification.');
+    }
+    return null;
+  }
 
   const body =
     count === 1
@@ -385,7 +390,7 @@ async function clearBadge() {
  * @returns {Function} Cleanup function to remove listeners
  */
 function addNotificationListeners({ onReceived, onTapped }) {
-  if (!_isAvailable || !Notifications) return () => {};
+  if (!_isAvailable || !Notifications) return () => { };
 
   const subscriptions = [];
 

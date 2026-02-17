@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme";
+import { useTheme } from "../../context/ThemeContext";
 import { spacing, typography } from "../../theme/spacing";
 
 // ─── Format relative time from timestamp ────────────────────
@@ -31,7 +31,7 @@ function formatTimeAgo(timestamp) {
 
 // ─── Determine status config from syncStatus ────────────────
 
-function getStatusConfig(syncStatus, loading, error) {
+function getStatusConfig(syncStatus, loading, error, colors) {
   if (error) {
     return {
       icon: "alert-circle-outline",
@@ -117,9 +117,11 @@ export default function SyncStatusBar({
   error = null,
   onRetry,
 }) {
+  const { colors } = useTheme();
+
   const config = useMemo(
-    () => getStatusConfig(syncStatus, loading, error),
-    [syncStatus, loading, error]
+    () => getStatusConfig(syncStatus, loading, error, colors),
+    [syncStatus, loading, error, colors]
   );
 
   const timeAgo = useMemo(
@@ -175,13 +177,13 @@ export default function SyncStatusBar({
 
         {config.showRetry && onRetry && (
           <TouchableOpacity
-            style={styles.retryButton}
+            style={[styles.retryButton, { backgroundColor: colors.errorLight, borderColor: colors.error + "30" }]}
             onPress={onRetry}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Ionicons name="refresh-outline" size={13} color={colors.error} />
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={[styles.retryText, { color: colors.error }]}>Retry</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -233,7 +235,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textTertiary,
   },
 
   // Retry button
@@ -241,16 +242,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    backgroundColor: colors.errorLight,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: spacing.chipRadius,
     borderWidth: 1,
-    borderColor: colors.error + "30",
   },
   retryText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.error,
   },
 });

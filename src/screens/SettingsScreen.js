@@ -168,7 +168,7 @@ function ActionButton({
 // ─── Main Screen ────────────────────────────────────────────
 
 export default function SettingsScreen() {
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors } = useTheme();
 
   const [cacheStats, setCacheStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -262,31 +262,6 @@ export default function SettingsScreen() {
         />
       }
     >
-
-      {/* ─── Appearance ────────────────────────────────────────── */}
-      <SectionHeader
-        icon="color-palette-outline"
-        title="Appearance"
-        subtitle="Customize app look and feel"
-      />
-
-      <View style={[styles.actionsCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-        <ActionButton
-          icon={isDark ? "moon" : "sunny"}
-          label="Dark Mode"
-          sublabel={isDark ? "Dark mode is on" : "Switch to dark mode"}
-          onPress={toggleTheme}
-          colorOverride={isDark ? colors.featurePurple : colors.accent}
-          rightElement={
-            <Switch
-              value={isDark}
-              onValueChange={toggleTheme}
-              trackColor={{ false: colors.borderMedium, true: colors.primaryLight }}
-              thumbColor={colors.white}
-            />
-          }
-        />
-      </View>
 
       {/* ─── Cache Overview ────────────────────────────────────── */}
       <SectionHeader

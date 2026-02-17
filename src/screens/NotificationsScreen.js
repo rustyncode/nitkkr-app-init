@@ -10,10 +10,10 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../theme";
 import { spacing, typography } from "../theme/spacing";
 import { fetchNotificationsCached } from "../api/client";
 import { notifyNewCollegeAlerts } from "../utils/notifications";
+import { useTheme } from "../context/ThemeContext";
 
 // ─── Category icon & color map ──────────────────────────────
 
@@ -23,10 +23,20 @@ const CATEGORY_CONFIG = {
     color: "#C62828",
     bgColor: "#FFEBEE",
   },
+  Results: {
+    icon: "trophy-outline",
+    color: "#FFD700",
+    bgColor: "#FFF9C4",
+  },
   Scholarship: {
     icon: "cash-outline",
     color: "#2E7D32",
     bgColor: "#E8F5E9",
+  },
+  Placements: {
+    icon: "rocket-outline",
+    color: "#FF4500",
+    bgColor: "#FFCCBC",
   },
   Recruitment: {
     icon: "briefcase-outline",
@@ -42,6 +52,11 @@ const CATEGORY_CONFIG = {
     icon: "calendar-outline",
     color: "#E65100",
     bgColor: "#FFF3E0",
+  },
+  "Sports & Culture": {
+    icon: "musical-notes-outline",
+    color: "#d81b60",
+    bgColor: "#fce4ec",
   },
   "Academic Event": {
     icon: "flask-outline",
@@ -136,20 +151,27 @@ function getRelativeDate(dateStr) {
 // ─── Notification Card ──────────────────────────────────────
 
 function NotificationCard({ item }) {
+  const { colors } = useTheme();
   const config = getCategoryConfig(item.category);
 
   const handlePress = () => {
     if (item.link) {
-      Linking.openURL(item.link).catch(() => {});
+      Linking.openURL(item.link).catch(() => { });
     }
   };
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.borderLight,
+          shadowColor: colors.shadow,
+        },
+      ]}
       onPress={handlePress}
-      activeOpacity={item.link ? 0.7 : 1}
-      disabled={!item.link}
+      activeOpacity={0.7}
     >
       <View style={styles.cardHeader}>
         {/* Category Icon */}
@@ -161,6 +183,7 @@ function NotificationCard({ item }) {
 
         {/* Content */}
         <View style={styles.cardContent}>
+
           {/* Category + Date Row */}
           <View style={styles.metaRow}>
             <View
@@ -177,7 +200,7 @@ function NotificationCard({ item }) {
           </View>
 
           {/* Title */}
-          <Text style={styles.cardTitle} numberOfLines={3}>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={3}>
             {item.title}
           </Text>
 
@@ -247,6 +270,7 @@ function CategoryChip({ label, isActive, onPress, count }) {
 // ─── Empty State ────────────────────────────────────────────
 
 function EmptyNotifications({ onRetry }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconCircle}>
@@ -277,6 +301,7 @@ function EmptyNotifications({ onRetry }) {
 // ─── Error State ────────────────────────────────────────────
 
 function ErrorState({ error, onRetry }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconCircle}>
@@ -347,6 +372,7 @@ function LoadingSkeleton() {
 // ─── Main Screen ────────────────────────────────────────────
 
 export default function NotificationsScreen() {
+  const { colors } = useTheme();
   const [notifications, setNotifications] = useState([]);
   const [filteredNotifications, setFilteredNotifications] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -429,20 +455,26 @@ export default function NotificationsScreen() {
         setTotalCount(result.total || items.length);
         setLastFetched(result.lastFetched || null);
 
-        // Extract categories with counts
-        const catCounts = {};
-        for (const item of items) {
+        // Extract categories efficiently
+        const categoryCounts = items.reduce((acc, item) => {
           const cat = item.category || "General";
-          catCounts[cat] = (catCounts[cat] || 0) + 1;
-        }
-        const cats = Object.entries(catCounts)
+          acc[cat] = (acc[cat] || 0) + 1;
+          return acc;
+        }, {});
+
+        const finalCats = Object.entries(categoryCounts)
           .map(([name, count]) => ({ name, count }))
           .sort((a, b) => b.count - a.count);
-        setCategories(cats);
+
+        setCategories(finalCats);
 
         // Apply current filter
         if (selectedCategory === "All") {
           setFilteredNotifications(items);
+        } else if (selectedCategory === "Others") {
+          setFilteredNotifications(
+            items.filter((item) => item.category !== "Academic" && item.category !== "Examination"),
+          );
         } else {
           setFilteredNotifications(
             items.filter((item) => item.category === selectedCategory),
@@ -470,6 +502,10 @@ export default function NotificationsScreen() {
   useEffect(() => {
     if (selectedCategory === "All") {
       setFilteredNotifications(notifications);
+    } else if (selectedCategory === "Others") {
+      setFilteredNotifications(
+        notifications.filter((item) => item.category !== "Academic" && item.category !== "Examination"),
+      );
     } else {
       setFilteredNotifications(
         notifications.filter((item) => item.category === selectedCategory),
@@ -507,7 +543,7 @@ export default function NotificationsScreen() {
     return (
       <View>
         {/* Info Bar */}
-        <View style={styles.infoBar}>
+        <View style={[styles.infoBar, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <View style={styles.infoLeft}>
             <Ionicons
               name="globe-outline"
@@ -577,7 +613,7 @@ export default function NotificationsScreen() {
   // ─── Main List ─────────────────────────────────────────────
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={filteredNotifications}
         renderItem={renderItem}
@@ -617,7 +653,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    // backgroundColor handled by theme hook
   },
   listContent: {
     paddingBottom: spacing.massive + 80,
@@ -633,9 +669,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: spacing.screenHorizontal,
     paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    // borderBottomColor handled inline
   },
   infoLeft: {
     flexDirection: "row",
@@ -645,19 +681,19 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
+    // color handled inline
   },
   countText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.primary,
+    // color handled inline
   },
 
   // ─── Category Chips ────────────────────────────────────────
   chipsContainer: {
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    // borderBottomColor handled inline
     paddingVertical: spacing.sm,
   },
   chipsContent: {
@@ -667,29 +703,29 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surfaceAlt,
+    // backgroundColor handled inline
     paddingVertical: spacing.sm - 2,
     paddingHorizontal: spacing.md,
     borderRadius: spacing.chipRadius,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    // borderColor handled inline
     gap: spacing.xs,
   },
   chipActive: {
-    backgroundColor: colors.primaryFaded,
-    borderColor: colors.primaryLight,
+    // backgroundColor handled inline
+    // borderColor handled inline
   },
   chipText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
+    // color handled inline
   },
   chipTextActive: {
-    color: colors.primary,
+    // color handled inline
     fontWeight: typography.fontWeight.semibold,
   },
   chipCount: {
-    backgroundColor: colors.border,
+    // backgroundColor handled inline
     borderRadius: 8,
     minWidth: 20,
     height: 18,
@@ -698,28 +734,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   chipCountActive: {
-    backgroundColor: colors.primary,
+    // backgroundColor handled inline
   },
   chipCountText: {
     fontSize: 10,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textSecondary,
+    // color handled inline
   },
   chipCountTextActive: {
-    color: colors.white,
+    // color handled inline
   },
 
   // ─── Card ──────────────────────────────────────────────────
   card: {
     marginHorizontal: spacing.screenHorizontal,
     marginTop: spacing.sm,
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: spacing.cardRadius,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
     elevation: 1,
-    shadowColor: colors.shadow,
+    // shadowColor handled inline
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.6,
     shadowRadius: 2,
@@ -759,12 +795,12 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textTertiary,
+    // color handled inline
   },
   cardTitle: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
+    // color handled inline
     lineHeight: typography.fontSize.md * typography.lineHeight.normal,
     marginBottom: spacing.sm,
   },
@@ -781,7 +817,7 @@ const styles = StyleSheet.create({
   sourceText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.regular,
-    color: colors.textTertiary,
+    // color handled inline
   },
   linkIndicator: {
     flexDirection: "row",
@@ -791,7 +827,7 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.primary,
+    // color handled inline
   },
 
   // ─── Empty / Error ─────────────────────────────────────────
@@ -807,24 +843,24 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colors.primaryFaded,
+    // backgroundColor handled inline
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xxl,
     borderWidth: 2,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
   },
   emptyTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
+    // color handled inline
     textAlign: "center",
     marginBottom: spacing.sm,
   },
   emptyMessage: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
+    // color handled inline
     textAlign: "center",
     lineHeight: typography.fontSize.md * typography.lineHeight.relaxed,
     marginBottom: spacing.xxl,
@@ -833,13 +869,13 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.primary,
+    // backgroundColor handled inline
     paddingVertical: spacing.buttonPaddingV,
     paddingHorizontal: spacing.buttonPaddingH,
     borderRadius: spacing.buttonRadius,
     gap: spacing.sm,
     elevation: 3,
-    shadowColor: colors.primary,
+    // shadowColor handled inline
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
@@ -847,7 +883,7 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+    // color handled inline
   },
 
   // ─── Skeleton ──────────────────────────────────────────────
@@ -856,19 +892,19 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   skeletonCard: {
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: spacing.cardRadius,
     padding: spacing.lg,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
   },
   skeletonRow: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
   skeletonBlock: {
-    backgroundColor: colors.skeleton,
+    // backgroundColor handled inline
     borderRadius: 4,
   },
 });

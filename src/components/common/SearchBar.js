@@ -7,7 +7,7 @@ import {
   Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme";
+import { useTheme } from "../../context/ThemeContext";
 import { spacing, typography } from "../../theme/spacing";
 
 export default function SearchBar({
@@ -18,6 +18,7 @@ export default function SearchBar({
   onFocus,
   onBlur,
 }) {
+  const { colors } = useTheme();
   const inputRef = useRef(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -56,7 +57,14 @@ export default function SearchBar({
     <Animated.View
       style={[styles.wrapper, { transform: [{ scale: scaleAnim }] }]}
     >
-      <View style={styles.container}>
+      <View style={[
+        styles.container,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          shadowColor: colors.shadow
+        }
+      ]}>
         {/* Search Icon */}
         <View style={styles.iconContainer}>
           <Ionicons
@@ -69,7 +77,7 @@ export default function SearchBar({
         {/* Input */}
         <TextInput
           ref={inputRef}
-          style={styles.input}
+          style={[styles.input, { color: colors.textPrimary }]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -91,7 +99,7 @@ export default function SearchBar({
             activeOpacity={0.6}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <View style={styles.clearIconBg}>
+            <View style={[styles.clearIconBg, { backgroundColor: colors.textTertiary }]}>
               <Ionicons
                 name="close"
                 size={spacing.iconSm}
@@ -115,14 +123,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface,
     borderRadius: spacing.inputRadius,
     borderWidth: 1.5,
-    borderColor: colors.border,
     height: spacing.inputHeight,
     paddingHorizontal: spacing.sm,
     elevation: 2,
-    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 6,
@@ -139,7 +144,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.regular,
-    color: colors.textPrimary,
     paddingVertical: 0,
     paddingHorizontal: spacing.xs,
     height: "100%",
@@ -156,7 +160,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.textTertiary,
     alignItems: "center",
     justifyContent: "center",
   },

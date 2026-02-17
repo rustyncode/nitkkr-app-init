@@ -2,7 +2,7 @@
 // Auto-detects the dev machine IP so real devices can connect.
 
 import Constants from "expo-constants";
-import { Platform } from "react-native";
+
 
 // ─── Auto-detect dev server host IP ─────────────────────────
 // When running in Expo Go on a real device, we extract the IP
@@ -32,23 +32,23 @@ function getDevServerHost() {
 
 const DEV_HOST = getDevServerHost();
 const DEV_API = DEV_HOST
-  ? `http://${DEV_HOST}:5000/api`
-  : "http://10.0.2.2:5000/api"; // fallback for Android emulator
+  ? `http://${DEV_HOST}:5001/api`
+  : "http://10.0.2.2:5001/api"; // fallback for Android emulator
 
 const ENV = {
   development: {
     API_BASE_URL: DEV_API,
     API_BASE_URL_IOS: DEV_HOST
-      ? `http://${DEV_HOST}:5000/api`
-      : "http://localhost:5000/api",
+      ? `http://${DEV_HOST}:5001/api`
+      : "http://localhost:5001/api",
     API_BASE_URL_WEB: DEV_HOST
-      ? `http://${DEV_HOST}:5000/api`
-      : "http://localhost:5000/api",
+      ? `http://${DEV_HOST}:5001/api`
+      : "http://localhost:5001/api",
   },
   production: {
-    API_BASE_URL: "https://nitkkr-backend.vercel.app/api",
-    API_BASE_URL_IOS: "https://nitkkr-backend.vercel.app/api",
-    API_BASE_URL_WEB: "https://nitkkr-backend.vercel.app/api",
+    API_BASE_URL: "https://nitkkr-app.vercel.app/api",
+    API_BASE_URL_IOS: "https://nitkkr-app.vercel.app/api",
+    API_BASE_URL_WEB: "https://nitkkr-app.vercel.app/api",
   },
 };
 
@@ -77,6 +77,7 @@ const config = {
     NOTIFICATIONS_DIGEST: "/notifications/digest",
     NOTIFICATIONS_DIGEST_FULL: "/notifications/digest/full",
     NOTIFICATIONS_SCRAPE: "/notifications/scrape",
+    JOBS: "/jobs",
   },
 
   // ─── Pagination ────────────────────────────────────────────
@@ -87,9 +88,9 @@ const config = {
   REQUEST_TIMEOUT_MS: 25000, // 25 seconds (more generous for real devices)
 
   // ─── App Info ──────────────────────────────────────────────
-  APP_NAME: "NIT KKR",
-  APP_TAGLINE: "Universal App",
-  APP_DESCRIPTION: "Your all-in-one companion for NIT Kurukshetra",
+  APP_NAME: "RustiNet",
+  APP_TAGLINE: "Student Hub for NIT KKR",
+  APP_DESCRIPTION: "Your one-stop app for PYQ papers, attendance tracking, and college updates",
   APP_VERSION: "1.0.0",
 
   // ─── Firebase Storage (direct download links) ──────────────
@@ -108,5 +109,7 @@ const config = {
   DEV_HOST: DEV_HOST,
   DEV_API_URL: DEV_API,
 };
+
+console.log("[Config] API Base URL:", config.API_BASE_URL);
 
 export default config;

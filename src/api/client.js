@@ -264,13 +264,18 @@ export async function fetchNotifications(options = {}) {
   };
 }
 
+export async function fetchNotificationCategories() {
+  const response = await request(config.ENDPOINTS.NOTIFICATIONS_CATEGORIES);
+  return response.data || [];
+}
+
 /**
- * Fetch all notification categories with counts.
+ * Fetch all available jobs from the backend.
  *
  * @returns {Promise<Array>}
  */
-export async function fetchNotificationCategories() {
-  const response = await request(config.ENDPOINTS.NOTIFICATIONS_CATEGORIES);
+export async function fetchJobs() {
+  const response = await request(config.ENDPOINTS.JOBS);
   return response.data || [];
 }
 
@@ -398,6 +403,17 @@ export async function fetchSubjectsCached(
   });
 }
 
+/**
+ * Cached fetchJobs — 30min TTL.
+ */
+export async function fetchJobsCached({ forceRefresh = false, onFreshData } = {}) {
+  const cacheKey = "jobs_list";
+  return cachedFetch(cacheKey, fetchJobs, [], 30 * 60 * 1000, {
+    forceRefresh,
+    onFreshData,
+  });
+}
+
 // ─── Exports ────────────────────────────────────────────────
 
 const apiClient = {
@@ -410,6 +426,7 @@ const apiClient = {
   fetchSubjects,
   fetchNotifications,
   fetchNotificationCategories,
+  fetchJobs,
   checkHealth,
   getBaseUrl,
   // Cached
@@ -419,6 +436,7 @@ const apiClient = {
   fetchNotificationsCached,
   fetchStatsCached,
   fetchSubjectsCached,
+  fetchJobsCached,
 };
 
 export default apiClient;

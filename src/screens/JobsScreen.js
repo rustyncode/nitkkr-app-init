@@ -1,568 +1,422 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Linking,
   TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../theme";
 import { spacing, typography } from "../theme/spacing";
+import { useTheme } from "../context/ThemeContext";
+import apiClient from "../api/client";
 
-const JOB_FEATURES = [
+const getJobFeatures = (colors) => [
   {
     icon: "briefcase-outline",
     title: "Campus Placements",
-    description:
-      "Get real-time updates on upcoming campus placement drives, eligible branches, and package details.",
+    description: "Get real-time updates on upcoming campus placement drives and package details.",
     color: colors.featureBlue,
     bgColor: colors.featureBlueBg,
   },
   {
     icon: "code-slash-outline",
     title: "Off-Campus Opportunities",
-    description:
-      "Curated off-campus job and internship openings from top companies relevant to NIT KKR students.",
+    description: "Curated off-campus openings from top companies relevant to NIT KKR students.",
     color: colors.featurePurple,
     bgColor: colors.featurePurpleBg,
   },
   {
     icon: "school-outline",
     title: "Internship Listings",
-    description:
-      "Summer & winter internship opportunities — paid, research, and industry internships all in one place.",
+    description: "Industry and research internships — all BTech roles in one place.",
     color: colors.featureGreen,
     bgColor: colors.featureGreenBg,
   },
   {
     icon: "trending-up-outline",
-    title: "Placement Stats",
-    description:
-      "Historical placement statistics, average & highest packages, and company-wise hiring trends.",
+    title: "Career Growth",
+    description: "Historical placement stats and hiring trends for different branches.",
     color: colors.featureOrange,
     bgColor: colors.featureOrangeBg,
   },
-  {
-    icon: "document-text-outline",
-    title: "Resume & Interview Prep",
-    description:
-      "Resume templates, interview tips, and company-specific preparation guides from placed seniors.",
-    color: colors.featureTeal,
-    bgColor: colors.featureTealBg,
-  },
-  {
-    icon: "people-outline",
-    title: "Alumni Network",
-    description:
-      "Connect with NIT KKR alumni working at top companies for referrals, guidance, and mentorship.",
-    color: colors.featureRed,
-    bgColor: colors.featureRedBg,
-  },
 ];
 
-function FeatureItem({ icon, title, description, color, bgColor }) {
+const JobCard = ({ job }) => {
+  const { colors, isDark } = useTheme();
+
+  // Highlight partner companies (MNCs)
+  const isPartner = ["Google", "Microsoft", "Amazon", "Atlassian", "Flipkart", "PhonePe"].includes(job.company);
+
   return (
-    <View style={styles.featureItem}>
-      <View style={[styles.featureIconCircle, { backgroundColor: bgColor }]}>
-        <Ionicons name={icon} size={22} color={color} />
+    <TouchableOpacity
+      style={[
+        styles.jobCard,
+        {
+          backgroundColor: colors.surface,
+          borderColor: isPartner ? colors.primary + "40" : colors.borderLight,
+          borderWidth: isPartner ? 1.5 : 1,
+        },
+        isPartner && styles.partnerCard
+      ]}
+      activeOpacity={0.7}
+      onPress={() => job.link && Linking.openURL(job.link).catch(() => { })}
+    >
+      {isPartner && (
+        <View style={[styles.partnerTag, { backgroundColor: colors.primary }]}>
+          <Ionicons name="sparkles" size={10} color="#FFF" />
+          <Text style={styles.partnerTagText}>PARTNER</Text>
+        </View>
+      )}
+
+      <View style={styles.jobCardTop}>
+        <View style={[styles.jobIconBgSmall, { backgroundColor: isPartner ? colors.primary + "15" : colors.primarySoft }]}>
+          <Ionicons name={isPartner ? "star" : "business-outline"} size={24} color={isPartner ? colors.primary : colors.primary} />
+        </View>
+        <View style={styles.jobInfo}>
+          <Text style={[styles.jobTitle, { color: colors.textPrimary }]} numberOfLines={1}>{job.title}</Text>
+          <Text style={[styles.jobCompany, { color: colors.textSecondary }]}>{job.company}</Text>
+        </View>
+        <View style={[styles.jobTypeBadge, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : colors.primary + '15' }]}>
+          <Text style={[styles.jobTypeText, { color: colors.primary }]}>{job.type}</Text>
+        </View>
       </View>
-      <View style={styles.featureTextContainer}>
-        <Text style={styles.featureTitle}>{title}</Text>
-        <Text style={styles.featureDescription}>{description}</Text>
+
+      <View style={styles.jobCardDetails}>
+        <View style={styles.detailItem}>
+          <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
+          <Text style={[styles.detailText, { color: colors.textTertiary }]}>{job.location}</Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Ionicons name="cash-outline" size={14} color={colors.featureGreen} />
+          <Text style={[styles.detailText, { color: colors.textTertiary }]}>{job.stipend || "TBD"}</Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
+          <Text style={[styles.detailText, { color: colors.textTertiary }]}>{job.deadline}</Text>
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
-}
+};
 
 export default function JobsScreen() {
-  const handleTPOPress = () => {
-    Linking.openURL("https://nitkkr.ac.in/training-placement-cell").catch(
-      () => {},
-    );
+  const { colors } = useTheme();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadJobs = async (force = false) => {
+    if (force) setRefreshing(true);
+    else setLoading(true);
+
+    setError(null);
+    try {
+      const result = await apiClient.fetchJobsCached({ forceRefresh: force });
+      setJobs(result.data || []);
+    } catch (err) {
+      console.error("[JobsScreen] Load failed:", err);
+      setError("Failed to load jobs. Please try again later.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Hero Section */}
-      <View style={styles.heroSection}>
-        <View style={styles.iconCircle}>
-          <Ionicons
-            name="briefcase-outline"
-            size={52}
-            color={colors.primaryLight}
-          />
+  useEffect(() => {
+    loadJobs();
+  }, []);
+
+  const handleTPOPress = () => {
+    Linking.openURL("https://nitkkr.ac.in/training-placement-cell").catch(() => { });
+  };
+
+  const renderHeader = () => (
+    <View>
+      {/* Simplified Hero */}
+      <View style={styles.hero}>
+        <View style={[styles.heroIconBg, { backgroundColor: colors.primarySoft }]}>
+          <Ionicons name="briefcase" size={32} color={colors.primary} />
         </View>
-
-        <Text style={styles.title}>Jobs & Placements</Text>
-
-        <View style={styles.comingSoonBadge}>
-          <Ionicons name="rocket-outline" size={15} color={colors.accent} />
-          <Text style={styles.comingSoonText}>Coming Soon</Text>
-        </View>
-
-        <Text style={styles.description}>
-          Your one-stop destination for campus placements, internships, and
-          career opportunities at NIT Kurukshetra.
+        <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>
+          Jobs & Placements
+        </Text>
+        <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
+          Your gateway to campus placements, internships, and student-level career opportunities
         </Text>
       </View>
 
-      {/* What to Expect */}
+      {/* Primary CTA - T&P Website */}
       <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <View
-            style={[
-              styles.sectionIconCircle,
-              { backgroundColor: colors.accentFaded },
-            ]}
-          >
-            <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
+        <TouchableOpacity
+          style={[styles.primaryCTA, { backgroundColor: colors.primary }]}
+          onPress={handleTPOPress}
+          activeOpacity={0.85}
+        >
+          <View style={styles.ctaContent}>
+            <View style={styles.ctaTextContainer}>
+              <Text style={styles.ctaTitle}>Visit Training & Placement Cell</Text>
+              <Text style={styles.ctaSubtitle}>Official placement updates & announcements</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.9)" />
           </View>
-          <Text style={styles.sectionTitle}>What to Expect</Text>
-        </View>
-
-        {JOB_FEATURES.map((item, index) => (
-          <FeatureItem key={index} {...item} />
-        ))}
+        </TouchableOpacity>
       </View>
 
-      {/* Quick Stats Preview */}
+      {/* Quick Glance */}
       <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <View
-            style={[
-              styles.sectionIconCircle,
-              { backgroundColor: colors.primarySoft },
-            ]}
-          >
-            <Ionicons
-              name="stats-chart-outline"
-              size={18}
-              color={colors.primary}
-            />
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Quick Glance</Text>
+        <View style={styles.statsRow}>
+          <View style={[styles.statBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.statNumber, { color: colors.primary }]}>200+</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Companies</Text>
           </View>
-          <Text style={styles.sectionTitle}>Quick Glance</Text>
-        </View>
-
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View
-              style={[
-                styles.statIconBg,
-                { backgroundColor: colors.featureBlueBg },
-              ]}
-            >
-              <Ionicons
-                name="business-outline"
-                size={20}
-                color={colors.featureBlue}
-              />
-            </View>
-            <Text style={styles.statValue}>200+</Text>
-            <Text style={styles.statLabel}>Companies Visit</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.statNumber, { color: colors.featureGreen }]}>₹44L+</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Highest Package</Text>
           </View>
-          <View style={styles.statCard}>
-            <View
-              style={[
-                styles.statIconBg,
-                { backgroundColor: colors.featureGreenBg },
-              ]}
-            >
-              <Ionicons
-                name="cash-outline"
-                size={20}
-                color={colors.featureGreen}
-              />
-            </View>
-            <Text style={styles.statValue}>₹44L+</Text>
-            <Text style={styles.statLabel}>Highest Package</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View
-              style={[
-                styles.statIconBg,
-                { backgroundColor: colors.featureOrangeBg },
-              ]}
-            >
-              <Ionicons
-                name="people-outline"
-                size={20}
-                color={colors.featureOrange}
-              />
-            </View>
-            <Text style={styles.statValue}>90%+</Text>
-            <Text style={styles.statLabel}>Placement Rate</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.statNumber, { color: colors.accent }]}>90%+</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Placement Rate</Text>
           </View>
         </View>
       </View>
 
-      {/* TPO Link */}
+      {/* Dynamic Job List Title */}
       <View style={styles.section}>
-        <View style={styles.tpoCard}>
-          <View style={styles.tpoIconContainer}>
-            <Ionicons name="link-outline" size={28} color={colors.primary} />
-          </View>
-          <Text style={styles.tpoTitle}>Visit T&P Cell</Text>
-          <Text style={styles.tpoDescription}>
-            For official placement announcements and updates, visit the NIT KKR
-            Training & Placement Cell website.
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
+            Latest Opportunities
           </Text>
-          <TouchableOpacity
-            style={styles.tpoButton}
-            onPress={handleTPOPress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="globe-outline" size={18} color={colors.white} />
-            <Text style={styles.tpoButtonText}>Open T&P Website</Text>
-            <Ionicons
-              name="open-outline"
-              size={14}
-              color="rgba(255,255,255,0.7)"
-            />
-          </TouchableOpacity>
+          {loading && <ActivityIndicator size="small" color={colors.primary} />}
         </View>
+        {error && (
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        )}
       </View>
+    </View>
+  );
 
-      {/* Notify Me CTA */}
-      <View style={styles.section}>
-        <View style={styles.notifyCard}>
-          <Ionicons
-            name="notifications-outline"
-            size={28}
-            color={colors.accent}
-          />
-          <Text style={styles.notifyTitle}>Get Notified</Text>
-          <Text style={styles.notifyDescription}>
-            We'll notify you as soon as the Jobs & Placements section goes live.
-            Stay tuned for updates!
+  return (
+    <FlatList
+      data={jobs}
+      keyExtractor={(item, index) => item.id || index.toString()}
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.contentContainer}
+      ListHeaderComponent={renderHeader}
+      renderItem={({ item }) => <JobCard job={item} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => loadJobs(true)}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+        />
+      }
+      ListEmptyComponent={!loading && (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="hourglass-outline" size={48} color={colors.textTertiary} />
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            {error ? "Couldn't reach server." : "No openings listed right now. Check back soon!"}
           </Text>
-          <View style={styles.notifyBadge}>
-            <Ionicons name="time-outline" size={14} color={colors.secondary} />
-            <Text style={styles.notifyBadgeText}>Launching Soon</Text>
-          </View>
         </View>
-      </View>
-
-      {/* Decorative Dots */}
-      <View style={styles.dotsRow}>
-        <View style={[styles.dot, styles.dotSmall]} />
-        <View style={[styles.dot, styles.dotMedium]} />
-        <View style={[styles.dot, styles.dotLarge]} />
-        <View style={[styles.dot, styles.dotMedium]} />
-        <View style={[styles.dot, styles.dotSmall]} />
-      </View>
-    </ScrollView>
+      )}
+      ListFooterComponent={<View style={{ height: 80 }} />}
+      showsVerticalScrollIndicator={false}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   contentContainer: {
-    paddingBottom: spacing.giant + 80,
+    padding: spacing.lg,
   },
-
-  // ─── Hero ──────────────────────────────────────────────────
-  heroSection: {
+  hero: {
     alignItems: "center",
-    paddingTop: spacing.xxxl + 8,
-    paddingBottom: spacing.xxl,
-    paddingHorizontal: spacing.xxxl,
+    paddingVertical: spacing.xxl,
   },
-  iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.primarySoft,
+  heroIconBg: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.xl,
-    borderWidth: 2,
-    borderColor: colors.borderLight,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: colors.textPrimary,
-    textAlign: "center",
-    marginBottom: spacing.md,
-    letterSpacing: 0.3,
-  },
-  comingSoonBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.accentFaded,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: spacing.chipRadius,
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.accent + "40",
-  },
-  comingSoonText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.accentDark,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  description: {
-    fontSize: typography.fontSize.md + 1,
-    fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-    maxWidth: 300,
-  },
-
-  // ─── Section ───────────────────────────────────────────────
-  section: {
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  sectionIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
+  heroTitle: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.black,
+    marginBottom: spacing.sm,
+    textAlign: "center",
+  },
+  heroSubtitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.regular,
+    lineHeight: 22,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  section: {
+    marginTop: spacing.xl,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    letterSpacing: 0.2,
-  },
-
-  // ─── Feature Items ─────────────────────────────────────────
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: colors.surface,
-    borderRadius: spacing.cardRadius,
-    padding: spacing.lg,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    elevation: 2,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
   },
-  featureIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  primaryCTA: {
+    borderRadius: spacing.cardRadius + 2,
+    padding: spacing.lg + 4,
+  },
+  ctaContent: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.lg,
+    justifyContent: "space-between",
   },
-  featureTextContainer: {
+  ctaTextContainer: {
     flex: 1,
   },
-  featureTitle: {
-    fontSize: typography.fontSize.md + 1,
+  ctaTitle: {
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    color: "#FFFFFF",
+    marginBottom: 4,
   },
-  featureDescription: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
-    lineHeight: 20,
+  ctaSubtitle: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: "rgba(255, 255, 255, 0.85)",
   },
-
-  // ─── Stats Grid ────────────────────────────────────────────
-  statsGrid: {
+  statsRow: {
     flexDirection: "row",
     gap: spacing.md,
   },
-  statCard: {
+  statBox: {
     flex: 1,
-    backgroundColor: colors.surface,
     borderRadius: spacing.cardRadius,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.lg + 4,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    elevation: 2,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
   },
-  statIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.sm,
-  },
-  statValue: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.extrabold,
-    color: colors.textPrimary,
-    marginTop: spacing.xs,
+  statNumber: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.black,
+    marginBottom: 2,
   },
   statLabel: {
-    fontSize: typography.fontSize.xs + 1,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
-    marginTop: spacing.xxs,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
     textAlign: "center",
   },
-
-  // ─── TPO Card ──────────────────────────────────────────────
-  tpoCard: {
-    backgroundColor: colors.surface,
-    borderRadius: spacing.cardRadius + 2,
-    padding: spacing.xl + 4,
-    alignItems: "center",
+  jobCard: {
+    borderRadius: spacing.cardRadius,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     elevation: 2,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  tpoIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primaryFaded,
+  jobCardTop: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     marginBottom: spacing.md,
   },
-  tpoTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-    textAlign: "center",
-  },
-  tpoDescription: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-  },
-  tpoButton: {
-    flexDirection: "row",
+  jobIconBgSmall: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: spacing.buttonRadius,
-    gap: spacing.sm,
-    elevation: 3,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    marginRight: spacing.md,
   },
-  tpoButtonText: {
-    fontSize: typography.fontSize.md,
+  jobInfo: {
+    flex: 1,
+  },
+  jobTitle: {
+    fontSize: typography.fontSize.md + 1,
     fontWeight: typography.fontWeight.bold,
-    color: colors.white,
+    marginBottom: 2,
   },
-
-  // ─── Notify Card ───────────────────────────────────────────
-  notifyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: spacing.cardRadius + 2,
-    padding: spacing.xl + 4,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.accentFaded,
-    elevation: 2,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  notifyTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-    textAlign: "center",
-  },
-  notifyDescription: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-  },
-  notifyBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.secondaryFaded,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: spacing.chipRadius,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.secondary + "30",
-  },
-  notifyBadgeText: {
+  jobCompany: {
     fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+  },
+  jobTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  jobTypeText: {
+    fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.bold,
-    color: colors.secondaryDark,
-    letterSpacing: 0.3,
     textTransform: "uppercase",
   },
-
-  // ─── Decorative Dots ───────────────────────────────────────
-  dotsRow: {
+  jobCardDetails: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.05)",
+    paddingTop: spacing.md,
+  },
+  detailItem: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
+  },
+  detailText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+  },
+  partnerCard: {
+    shadowColor: "#FF4500",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  partnerTag: {
+    position: "absolute",
+    top: -10,
+    right: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    zIndex: 10,
+    elevation: 4,
+  },
+  partnerTagText: {
+    color: "#FFF",
+    fontSize: 9,
+    fontWeight: typography.fontWeight.bold,
+    letterSpacing: 0.5,
+  },
+  emptyContainer: {
+    alignItems: "center",
     justifyContent: "center",
-    gap: spacing.sm,
-    marginTop: spacing.xxxl,
-    paddingBottom: spacing.xl,
+    paddingVertical: spacing.xxl,
+    opacity: 0.6,
   },
-  dot: {
-    borderRadius: 50,
-    backgroundColor: colors.border,
+  emptyText: {
+    marginTop: spacing.md,
+    fontSize: typography.fontSize.md,
+    textAlign: "center",
+    paddingHorizontal: spacing.xl,
   },
-  dotSmall: {
-    width: 4,
-    height: 4,
-    opacity: 0.3,
-  },
-  dotMedium: {
-    width: 6,
-    height: 6,
-    opacity: 0.5,
-  },
-  dotLarge: {
-    width: 8,
-    height: 8,
-    opacity: 0.7,
+  errorText: {
+    fontSize: typography.fontSize.sm,
+    marginBottom: spacing.md,
+    fontWeight: typography.fontWeight.medium,
   },
 });

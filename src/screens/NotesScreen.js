@@ -1,91 +1,85 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { spacing, typography } from "../theme/spacing";
 
-const PLANNED_ITEMS = [
-  {
-    icon: "document-text-outline",
-    title: "Subject-wise Notes",
-    description: "Organized by department, semester, and subject code.",
-    color: colors.featureBlue,
-    bgColor: colors.featureBlueBg,
-  },
-  {
-    icon: "pencil-outline",
-    title: "Handwritten Notes",
-    description: "Top-quality handwritten notes from toppers and seniors.",
-    color: colors.featurePurple,
-    bgColor: colors.featurePurpleBg,
-  },
-  {
-    icon: "flash-outline",
-    title: "Quick Revision",
-    description: "Condensed revision materials for last-minute prep.",
-    color: colors.featureOrange,
-    bgColor: colors.featureOrangeBg,
-  },
-  {
-    icon: "cloud-download-outline",
-    title: "Offline Access",
-    description:
-      "Download notes to study anytime, anywhere — no internet needed.",
-    color: colors.featureGreen,
-    bgColor: colors.featureGreenBg,
-  },
-  {
-    icon: "share-social-outline",
-    title: "Share with Friends",
-    description:
-      "Easily share notes with classmates via WhatsApp, Telegram, etc.",
-    color: colors.featureTeal,
-    bgColor: colors.featureTealBg,
-  },
-  {
-    icon: "star-outline",
-    title: "Bookmark Favorites",
-    description: "Save your most-used notes for quick access later.",
-    color: colors.featureRed,
-    bgColor: colors.featureRedBg,
-  },
-];
-
-function PlannedItem({ icon, title, description, color, bgColor }) {
-  return (
-    <View style={styles.plannedItem}>
-      <View style={[styles.plannedIconCircle, { backgroundColor: bgColor }]}>
-        <Ionicons name={icon} size={22} color={color} />
-      </View>
-      <View style={styles.plannedTextContainer}>
-        <Text style={styles.plannedTitle}>{title}</Text>
-        <Text style={styles.plannedDescription}>{description}</Text>
-      </View>
-    </View>
-  );
-}
-
 export default function NotesScreen() {
+  const { colors } = useTheme();
+
+  const PLANNED_ITEMS = useMemo(() => [
+    {
+      icon: "document-text-outline",
+      title: "Subject-wise Notes",
+      description: "Organized by department, semester, and subject code.",
+    // color handled inline
+      bgColor: colors.featureBlueBg,
+    },
+    {
+      icon: "pencil-outline",
+      title: "Handwritten Notes",
+      description: "Top-quality handwritten notes from toppers and seniors.",
+    // color handled inline
+      bgColor: colors.featurePurpleBg,
+    },
+    {
+      icon: "flash-outline",
+      title: "Quick Revision",
+      description: "Condensed revision materials for last-minute prep.",
+    // color handled inline
+      bgColor: colors.featureOrangeBg,
+    },
+    {
+      icon: "cloud-download-outline",
+      title: "Offline Access",
+      description:
+        "Download notes to study anytime, anywhere — no internet needed.",
+    // color handled inline
+      bgColor: colors.featureGreenBg,
+    },
+    {
+      icon: "share-social-outline",
+      title: "Share with Friends",
+      description:
+        "Easily share notes with classmates via WhatsApp, Telegram, etc.",
+    // color handled inline
+      bgColor: colors.featureTealBg,
+    },
+    {
+      icon: "star-outline",
+      title: "Bookmark Favorites",
+      description: "Save your most-used notes for quick access later.",
+    // color handled inline
+      bgColor: colors.featureRedBg,
+    },
+  ], [colors]);
+
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
       {/* Hero */}
       <View style={styles.heroSection}>
-        <View style={styles.iconCircle}>
+        <View style={[styles.iconCircle, { backgroundColor: colors.primarySoft, borderColor: colors.borderLight }]}>
           <Ionicons name="book-outline" size={52} color={colors.primaryLight} />
         </View>
 
-        <Text style={styles.title}>Notes</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Notes</Text>
 
-        <View style={styles.comingSoonBadge}>
+        <View style={[
+          styles.comingSoonBadge,
+          {
+    // backgroundColor handled inline
+    // borderColor handled inline
+          }
+        ]}>
           <Ionicons name="rocket-outline" size={15} color={colors.secondary} />
-          <Text style={styles.comingSoonText}>Coming Soon</Text>
+          <Text style={[styles.comingSoonText, { color: colors.secondaryDark }]}>Coming Soon</Text>
         </View>
 
-        <Text style={styles.description}>
+        <Text style={[styles.description, { color: colors.textSecondary }]}>
           We're building a comprehensive notes library for every department and
           subject at NIT Kurukshetra.
         </Text>
@@ -106,20 +100,27 @@ export default function NotesScreen() {
               color={colors.secondary}
             />
           </View>
-          <Text style={styles.sectionTitle}>What to Expect</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>What to Expect</Text>
         </View>
 
         {PLANNED_ITEMS.map((item, index) => (
-          <PlannedItem key={index} {...item} />
+          <PlannedItem key={index} {...item} colors={colors} />
         ))}
       </View>
 
       {/* Contribute CTA */}
       <View style={styles.section}>
-        <View style={styles.contributeCard}>
+        <View style={[
+          styles.contributeCard,
+          {
+    // backgroundColor handled inline
+    // borderColor handled inline
+    // shadowColor handled inline
+          }
+        ]}>
           <Ionicons name="heart-outline" size={28} color={colors.error} />
-          <Text style={styles.contributeTitle}>Want to Contribute?</Text>
-          <Text style={styles.contributeText}>
+          <Text style={[styles.contributeTitle, { color: colors.textPrimary }]}>Want to Contribute?</Text>
+          <Text style={[styles.contributeText, { color: colors.textSecondary }]}>
             Have notes you'd like to share with fellow NITians? We'd love your
             help building this section. Stay tuned for the upload feature!
           </Text>
@@ -128,20 +129,41 @@ export default function NotesScreen() {
 
       {/* Decorative Dots */}
       <View style={styles.dotsRow}>
-        <View style={[styles.dot, styles.dotSmall]} />
-        <View style={[styles.dot, styles.dotMedium]} />
-        <View style={[styles.dot, styles.dotLarge]} />
-        <View style={[styles.dot, styles.dotMedium]} />
-        <View style={[styles.dot, styles.dotSmall]} />
+        <View style={[styles.dot, styles.dotSmall, { backgroundColor: colors.border }]} />
+        <View style={[styles.dot, styles.dotMedium, { backgroundColor: colors.border }]} />
+        <View style={[styles.dot, styles.dotLarge, { backgroundColor: colors.border }]} />
+        <View style={[styles.dot, styles.dotMedium, { backgroundColor: colors.border }]} />
+        <View style={[styles.dot, styles.dotSmall, { backgroundColor: colors.border }]} />
       </View>
     </ScrollView>
+  );
+}
+
+function PlannedItem({ icon, title, description, color, bgColor, colors }) {
+  return (
+    <View style={[
+      styles.plannedItem,
+      {
+    // backgroundColor handled inline
+    // borderColor handled inline
+    // shadowColor handled inline
+      }
+    ]}>
+      <View style={[styles.plannedIconCircle, { backgroundColor: bgColor }]}>
+        <Ionicons name={icon} size={22} color={color} />
+      </View>
+      <View style={styles.plannedTextContainer}>
+        <Text style={[styles.plannedTitle, { color: colors.textPrimary }]}>{title}</Text>
+        <Text style={[styles.plannedDescription, { color: colors.textSecondary }]}>{description}</Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    // backgroundColor handled inline
   },
   contentContainer: {
     paddingBottom: spacing.giant + 80,
@@ -158,17 +180,17 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colors.primarySoft,
+    // backgroundColor handled inline
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xl,
     borderWidth: 2,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
   },
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: colors.textPrimary,
+    // color handled inline
     textAlign: "center",
     marginBottom: spacing.md,
     letterSpacing: 0.3,
@@ -176,26 +198,26 @@ const styles = StyleSheet.create({
   comingSoonBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.secondaryFaded,
+    // backgroundColor handled inline
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: spacing.chipRadius,
     gap: spacing.sm,
     marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: colors.secondary + "40",
+    // borderColor handled inline
   },
   comingSoonText: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.bold,
-    color: colors.secondaryDark,
+    // color handled inline
     letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   description: {
     fontSize: typography.fontSize.md + 1,
     fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
+    // color handled inline
     textAlign: "center",
     lineHeight: 22,
     maxWidth: 300,
@@ -222,7 +244,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
+    // color handled inline
     letterSpacing: 0.2,
   },
 
@@ -230,14 +252,14 @@ const styles = StyleSheet.create({
   plannedItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: spacing.cardRadius,
     padding: spacing.lg,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
     elevation: 2,
-    shadowColor: colors.shadow,
+    // shadowColor handled inline
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -256,26 +278,26 @@ const styles = StyleSheet.create({
   plannedTitle: {
     fontSize: typography.fontSize.md + 1,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
+    // color handled inline
     marginBottom: spacing.xs,
   },
   plannedDescription: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
+    // color handled inline
     lineHeight: 20,
   },
 
   // ─── Contribute Card ───────────────────────────────────────
   contributeCard: {
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: spacing.cardRadius + 2,
     padding: spacing.xl + 4,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
     elevation: 2,
-    shadowColor: colors.shadow,
+    // shadowColor handled inline
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -283,7 +305,7 @@ const styles = StyleSheet.create({
   contributeTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
+    // color handled inline
     marginTop: spacing.md,
     marginBottom: spacing.sm,
     textAlign: "center",
@@ -291,7 +313,7 @@ const styles = StyleSheet.create({
   contributeText: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
+    // color handled inline
     textAlign: "center",
     lineHeight: 22,
   },
@@ -307,7 +329,7 @@ const styles = StyleSheet.create({
   },
   dot: {
     borderRadius: 50,
-    backgroundColor: colors.border,
+    // backgroundColor handled inline
   },
   dotSmall: {
     width: 4,

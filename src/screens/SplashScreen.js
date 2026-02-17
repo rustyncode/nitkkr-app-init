@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { View, Text, Image, StyleSheet, Animated, Dimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { checkForNewNotifications } from "../utils/notificationTracker";
-import { colors } from "../theme"; // We will use static colors here for now until context is fully integrated
 import Constants from "expo-constants";
 
 const { width } = Dimensions.get("window");
@@ -69,14 +68,14 @@ export default function SplashScreen({ onFinish }) {
             >
                 <View style={styles.logoContainer}>
                     <Image
-                        source={require("../../assets/nitkkr-logo.png")}
+                        source={require("../../assets/splash-icon.png")}
                         style={styles.logo}
                         resizeMode="contain"
                     />
                 </View>
 
-                <Text style={styles.title}>NIT KKR PYQ</Text>
-                <Text style={styles.subtitle}>Previous Year Questions & Notes</Text>
+                <Text style={styles.title}>RustiNet</Text>
+                <Text style={styles.subtitle}>Student Hub for NIT KKR</Text>
 
                 <View style={styles.loaderContainer}>
                     <View style={styles.dot} />
@@ -105,19 +104,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     logoContainer: {
-        width: 160,
-        height: 160,
-        backgroundColor: "rgba(255,255,255,0.1)",
-        borderRadius: 80,
+        width: 180,
+        height: 180,
+        borderRadius: 90,
         alignItems: "center",
         justifyContent: "center",
         marginBottom: 30,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.15)",
+        overflow: 'hidden',
     },
     logo: {
-        width: 100,
-        height: 100,
+        width: 180,
+        height: 180,
+        borderRadius: 90,
     },
     title: {
         fontSize: 32,

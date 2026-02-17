@@ -1,39 +1,36 @@
 import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
-import { colors } from "../../theme";
 import { spacing, typography } from "../../theme/spacing";
+import { useTheme } from "../../context/ThemeContext";
 
-const LOGO = require("../../../assets/nitkkr-logo.png");
+
 
 export default function Header() {
-  return (
-    <View style={styles.wrapper}>
-      <View style={styles.container}>
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-        </View>
+  const { colors, isDark } = useTheme();
 
-        {/* Title block */}
+  return (
+    <View style={[styles.wrapper, { backgroundColor: colors.primary }]}>
+      <View style={styles.container}>
+        {/* Title block - Centered/Left aligned without logo */}
         <View style={styles.textContainer}>
-          <Text style={styles.title} numberOfLines={1}>
-            NIT KKR
+          <Text style={[styles.title, { color: colors.textInverse }]} numberOfLines={1}>
+            RustiNet
           </Text>
-          <Text style={styles.subtitle} numberOfLines={1}>
-            Universal App
+          <Text style={[styles.subtitle, { color: "rgba(255,255,255,0.8)" }]} numberOfLines={1}>
+            Student Hub for NIT KKR
           </Text>
         </View>
       </View>
 
       {/* Bottom accent strip */}
-      <View style={styles.accentStrip} />
+      <View style={[styles.accentStrip, { backgroundColor: colors.accent }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: colors.primary,
+    // backgroundColor handled inline
   },
 
   container: {
@@ -44,45 +41,25 @@ const styles = StyleSheet.create({
     minHeight: spacing.headerHeight,
   },
 
-  logoContainer: {
-    width: spacing.logoMd + 4,
-    height: spacing.logoMd + 4,
-    borderRadius: (spacing.logoMd + 4) / 2,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    elevation: 6,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.25)",
-  },
-
-  logo: {
-    width: spacing.logoMd - 2,
-    height: spacing.logoMd - 2,
-  },
+  // Logo styles removed
 
   textContainer: {
     flex: 1,
-    marginLeft: spacing.md + 2,
+    marginLeft: spacing.sm, // Reduced margin since no logo
     justifyContent: "center",
   },
 
   title: {
     fontSize: typography.fontSize.xxl,
     fontWeight: typography.fontWeight.extrabold,
-    color: colors.textInverse,
+    // color handled inline
     letterSpacing: typography.letterSpacing.wide + 0.5,
   },
 
   subtitle: {
     fontSize: typography.fontSize.sm + 1,
     fontWeight: typography.fontWeight.medium,
-    color: colors.accentLight,
+    // color handled inline
     marginTop: spacing.xxs + 1,
     letterSpacing: typography.letterSpacing.wider,
     textTransform: "uppercase",
@@ -91,6 +68,6 @@ const styles = StyleSheet.create({
 
   accentStrip: {
     height: 3,
-    backgroundColor: colors.accent,
+    // backgroundColor handled inline
   },
 });

@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme";
+import { useTheme } from "../../context/ThemeContext";
 import { spacing, typography } from "../../theme/spacing";
 
 export default function EmptyState({
@@ -13,28 +13,29 @@ export default function EmptyState({
   onAction,
   showAction = true,
 }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.container}>
       {/* Icon Circle */}
-      <View style={styles.iconCircle}>
+      <View style={[styles.iconCircle, { backgroundColor: colors.primaryFaded, borderColor: colors.borderLight }]}>
         <Ionicons name={icon} size={48} color={colors.primaryLight} />
       </View>
 
       {/* Title */}
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
 
       {/* Message */}
-      <Text style={styles.message}>{message}</Text>
+      <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
 
       {/* Hint — secondary helper text (e.g., "Try searching by subject code") */}
       {hint ? (
-        <View style={styles.hintContainer}>
+        <View style={[styles.hintContainer, { backgroundColor: colors.infoLight, borderColor: colors.info + "30" }]}>
           <Ionicons
             name="information-circle-outline"
             size={16}
             color={colors.info}
           />
-          <Text style={styles.hintText}>{hint}</Text>
+          <Text style={[styles.hintText, { color: colors.infoDark }]}>{hint}</Text>
         </View>
       ) : null}
 
@@ -42,7 +43,7 @@ export default function EmptyState({
       {showAction && actionLabel && onAction && (
         <TouchableOpacity
           onPress={onAction}
-          style={styles.actionButton}
+          style={[styles.actionButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -50,17 +51,17 @@ export default function EmptyState({
             size={spacing.iconMd}
             color={colors.white}
           />
-          <Text style={styles.actionText}>{actionLabel}</Text>
+          <Text style={[styles.actionText, { color: colors.white }]}>{actionLabel}</Text>
         </TouchableOpacity>
       )}
 
       {/* Decorative dots */}
       <View style={styles.dotsRow}>
-        <View style={[styles.dot, styles.dotSmall]} />
-        <View style={[styles.dot, styles.dotMedium]} />
-        <View style={[styles.dot, styles.dotLarge]} />
-        <View style={[styles.dot, styles.dotMedium]} />
-        <View style={[styles.dot, styles.dotSmall]} />
+        <View style={[styles.dot, styles.dotSmall, { backgroundColor: colors.border }]} />
+        <View style={[styles.dot, styles.dotMedium, { backgroundColor: colors.border }]} />
+        <View style={[styles.dot, styles.dotLarge, { backgroundColor: colors.border }]} />
+        <View style={[styles.dot, styles.dotMedium, { backgroundColor: colors.border }]} />
+        <View style={[styles.dot, styles.dotSmall, { backgroundColor: colors.border }]} />
       </View>
     </View>
   );
@@ -80,18 +81,18 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colors.primaryFaded,
+    // backgroundColor: colors.primaryFaded, // handled inline
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xxl,
     borderWidth: 2,
-    borderColor: colors.borderLight,
+    // borderColor: colors.borderLight, // handled inline
   },
 
   title: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
+    // color: colors.textPrimary, // handled inline
     textAlign: "center",
     marginBottom: spacing.sm,
     letterSpacing: typography.letterSpacing.normal,
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
   message: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.regular,
-    color: colors.textSecondary,
+    // color: colors.textSecondary, // handled inline
     textAlign: "center",
     lineHeight: typography.fontSize.md * typography.lineHeight.relaxed,
     marginBottom: spacing.lg,
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
   hintContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.infoLight,
+    // backgroundColor: colors.infoLight, // handled inline
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.lg,
     borderRadius: spacing.cardRadiusSm,
@@ -118,27 +119,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
     maxWidth: 300,
     borderWidth: 1,
-    borderColor: colors.info + "30",
+    // borderColor: colors.info + "30", // handled inline
   },
 
   hintText: {
     flex: 1,
     fontSize: typography.fontSize.sm + 1,
     fontWeight: typography.fontWeight.medium,
-    color: colors.infoDark,
+    // color: colors.infoDark, // handled inline
     lineHeight: typography.fontSize.sm * typography.lineHeight.relaxed,
   },
 
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.primary,
+    // backgroundColor: colors.primary, // handled inline
     paddingVertical: spacing.buttonPaddingV,
     paddingHorizontal: spacing.buttonPaddingH,
     borderRadius: spacing.buttonRadius,
     gap: spacing.sm,
     elevation: 3,
-    shadowColor: colors.primary,
+    // shadowColor: colors.primary, // handled inline
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+    // color: colors.white, // handled inline
   },
 
   dotsRow: {
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
 
   dot: {
     borderRadius: 50,
-    backgroundColor: colors.border,
+    // backgroundColor: colors.border, // handled inline
   },
 
   dotSmall: {

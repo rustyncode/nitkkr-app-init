@@ -6,9 +6,11 @@ import FilterBar from "../components/filters/FilterBar";
 import SyncStatusBar from "../components/common/SyncStatusBar";
 import PaperList from "../components/papers/PaperList";
 import usePapers from "../hooks/usePapers";
-import { colors } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 
 export default function PYQScreen() {
+  const { colors } = useTheme();
+
   // ─── Data hook ──────────────────────────────────────────────
   const {
     papers,
@@ -40,21 +42,23 @@ export default function PYQScreen() {
     setFiltersExpanded((prev) => !prev);
   }, []);
 
-  // ─── Retry handler ──────────────────────────────────────────
   const handleRetry = useCallback(() => {
-    loadPapers(false);
+    loadPapers(true);
   }, [loadPapers]);
 
-  // ─── Reset all filters and search ───────────────────────────
   const handleResetAll = useCallback(() => {
     resetAll();
-    setFiltersExpanded(false);
   }, [resetAll]);
 
-  // ─── Sticky header (sync status + search + filters) rendered inside list ──
-  const ListHeader = useCallback(
-    () => (
-      <View style={styles.listHeader}>
+  // ─── Render ─────────────────────────────────────────────────
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* 
+        Sticky Header Section
+        Moved outside ListHeaderComponent to prevent re-renders and focus loss 
+        when typing in SearchBar.
+      */}
+      <View style={[styles.listHeader, { backgroundColor: colors.background }]}>
         {/* Sync Status Bar */}
         <SyncStatusBar
           syncStatus={syncStatus}
@@ -82,30 +86,8 @@ export default function PYQScreen() {
           onToggleExpand={toggleFilters}
         />
       </View>
-    ),
-    [
-      syncStatus,
-      loading,
-      refreshing,
-      error,
-      handleRetry,
-      searchQuery,
-      setSearchQuery,
-      clearSearch,
-      filters,
-      filterOptions,
-      updateFilter,
-      clearFilters,
-      activeFilterCount,
-      filtersExpanded,
-      toggleFilters,
-    ],
-  );
 
-  // ─── Render ─────────────────────────────────────────────────
-  return (
-    <View style={styles.container}>
-      {/* Paper List with integrated sync status/search/filters as ListHeader */}
+      {/* Paper List */}
       <PaperList
         papers={papers}
         pagination={pagination}
@@ -119,7 +101,8 @@ export default function PYQScreen() {
         onRefresh={onRefresh}
         onRetry={handleRetry}
         onResetFilters={handleResetAll}
-        ListHeaderComponent={<ListHeader />}
+        // ListHeaderComponent is now null (or we could pass a small spacer)
+        ListHeaderComponent={null}
       />
     </View>
   );
@@ -128,10 +111,16 @@ export default function PYQScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    // backgroundColor handled inline
   },
-
   listHeader: {
-    backgroundColor: colors.background,
+    // backgroundColor handled inline
+    zIndex: 10, // Ensure header stays above list if needed
+    // Shadow for sticky effect
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 });

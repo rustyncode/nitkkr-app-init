@@ -11,11 +11,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { colors } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { spacing, typography } from "../theme/spacing";
 import config from "../constants/config";
 
-const LOGO = require("../../assets/nitkkr-logo.png");
+
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // ─── Quick Actions (tappable grid) ─────────────────────────
@@ -32,25 +32,26 @@ const QUICK_ACTIONS = [
     route: "PYQ",
   },
   {
+    key: "Attendance",
+    icon: "calendar",
+    label: "Attendance",
+    subtitle: "Track records",
+    gradient: ["#10B981", "#34D399"],
+    bg: "rgba(16, 185, 129, 0.10)",
+    color: "#10B981",
+    route: "Attendance",
+  },
+  {
     key: "Jobs",
     icon: "briefcase",
     label: "Jobs",
-    subtitle: "Coming soon",
+    subtitle: "Latest openings",
     gradient: ["#F59E0B", "#FBBF24"],
     bg: "rgba(245, 158, 11, 0.10)",
     color: "#F59E0B",
     route: "Jobs",
   },
-  {
-    key: "Notes",
-    icon: "book",
-    label: "Notes",
-    subtitle: "Coming soon",
-    gradient: ["#10B981", "#34D399"],
-    bg: "rgba(16, 185, 129, 0.10)",
-    color: "#10B981",
-    route: "Notes",
-  },
+
   {
     key: "Alerts",
     icon: "notifications",
@@ -130,7 +131,7 @@ const COMING_FEATURES = [
   {
     icon: "briefcase",
     title: "Placement Hub",
-    tag: "Soon",
+    tag: "Live",
     tagColor: "#10B981",
     tagBg: "rgba(16, 185, 129, 0.12)",
     color: "#F59E0B",
@@ -219,19 +220,20 @@ const STEPS = [
 // ─── Sub-components ─────────────────────────────────────────
 
 function QuickActionCard({ item, onPress }) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity
-      style={styles.quickCard}
+      style={[styles.quickCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
       activeOpacity={0.7}
       onPress={onPress}
     >
       <View style={[styles.quickIconWrap, { backgroundColor: item.bg }]}>
         <Ionicons name={item.icon} size={24} color={item.color} />
       </View>
-      <Text style={styles.quickLabel} numberOfLines={1}>
+      <Text style={[styles.quickLabel, { color: colors.textPrimary }]} numberOfLines={1}>
         {item.label}
       </Text>
-      <Text style={styles.quickSub} numberOfLines={1}>
+      <Text style={[styles.quickSub, { color: colors.textTertiary }]} numberOfLines={1}>
         {item.subtitle}
       </Text>
     </TouchableOpacity>
@@ -239,28 +241,30 @@ function QuickActionCard({ item, onPress }) {
 }
 
 function StatChip({ item }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.statChip}>
+    <View style={[styles.statChip, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
       <View style={[styles.statIconWrap, { backgroundColor: item.bg }]}>
         <Ionicons name={item.icon} size={18} color={item.color} />
       </View>
       <View style={styles.statTextWrap}>
-        <Text style={styles.statValue}>{item.value}</Text>
-        <Text style={styles.statLabel}>{item.label}</Text>
+        <Text style={[styles.statValue, { color: colors.textPrimary }]}>{item.value}</Text>
+        <Text style={[styles.statLabel, { color: colors.textTertiary }]}>{item.label}</Text>
       </View>
     </View>
   );
 }
 
 function FeatureRow({ item, isLast }) {
+  const { colors } = useTheme();
   return (
-    <View style={[styles.featureRow, !isLast && styles.featureRowBorder]}>
+    <View style={[styles.featureRow, !isLast && [styles.featureRowBorder, { borderBottomColor: colors.borderLight }]]}>
       <View style={[styles.featureIconWrap, { backgroundColor: item.bg }]}>
         <Ionicons name={item.icon} size={20} color={item.color} />
       </View>
       <View style={styles.featureText}>
-        <Text style={styles.featureTitle}>{item.title}</Text>
-        <Text style={styles.featureDesc}>{item.description}</Text>
+        <Text style={[styles.featureTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+        <Text style={[styles.featureDesc, { color: colors.textSecondary }]}>{item.description}</Text>
       </View>
     </View>
   );
@@ -285,50 +289,66 @@ function ComingChip({ item }) {
 }
 
 function StepItem({ item, isLast }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.stepRow}>
       {/* Timeline */}
       <View style={styles.stepTimeline}>
         <View style={[styles.stepDot, { backgroundColor: item.color }]}>
-          <Text style={styles.stepNum}>{item.num}</Text>
+          <Text style={[styles.stepNum, { color: colors.white }]}>{item.num}</Text>
         </View>
-        {!isLast && <View style={styles.stepLine} />}
+        {!isLast && <View style={[styles.stepLine, { backgroundColor: colors.borderLight }]} />}
       </View>
       {/* Content */}
       <View style={[styles.stepContent, isLast && { marginBottom: 0 }]}>
         <View style={styles.stepHeader}>
           <Ionicons name={item.icon} size={15} color={item.color} />
-          <Text style={styles.stepTitle}>{item.title}</Text>
+          <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>{item.title}</Text>
         </View>
-        <Text style={styles.stepDesc}>{item.desc}</Text>
+        <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>{item.desc}</Text>
       </View>
     </View>
   );
 }
 
+// ... (existing imports)
+
+// ─── Greeting Logic ────────────────────────────────────────
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 18) return "Good Afternoon";
+  return "Good Evening";
+}
+
+// ─── Section Header ─────────────────────────────────────────
 function SectionHeader({ icon, iconColor, iconBg, title, subtitle }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.sectionHeader}>
       <View style={[styles.sectionIconWrap, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={18} color={iconColor} />
+        <Ionicons name={icon} size={20} color={iconColor} />
       </View>
       <View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {subtitle ? (
-          <Text style={styles.sectionSubtitle}>{subtitle}</Text>
-        ) : null}
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
+        <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>{subtitle}</Text>
       </View>
     </View>
   );
 }
+
+// ... (existing constants)
 
 // ─── Main Screen ────────────────────────────────────────────
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const { colors } = useTheme(); // Use dynamic theme colors
+  const greeting = getGreeting();
 
   const handleWebsitePress = () => {
-    Linking.openURL("https://nitkkr.ac.in").catch(() => {});
+    Linking.openURL("https://nitkkr.ac.in").catch(() => { });
   };
 
   const navigateTo = (route) => {
@@ -337,29 +357,27 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      style={[styles.container, { backgroundColor: colors.background }]}
       showsVerticalScrollIndicator={false}
     >
-      {/* ─── Hero ─────────────────────────────────────────────── */}
-      <View style={styles.hero}>
-        {/* Decorative circles */}
-        <View style={styles.heroCircle1} />
-        <View style={styles.heroCircle2} />
-
-        <View style={styles.heroInner}>
-          <View style={styles.heroLogoWrap}>
-            <Image source={LOGO} style={styles.heroLogo} resizeMode="contain" />
-          </View>
-
-          <Text style={styles.heroTitle}>{config.APP_NAME}</Text>
-
-          <View style={styles.heroBadge}>
-            <View style={styles.heroBadgeDot} />
-            <Text style={styles.heroBadgeText}>{config.APP_TAGLINE}</Text>
-          </View>
-
-          <Text style={styles.heroDesc}>{config.APP_DESCRIPTION}</Text>
+      {/* Quick Stats Bar - Replaces Hero */}
+      <View style={[styles.statsBar, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
+        <View style={styles.statItem}>
+          <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+          <Text style={[styles.statNumber, { color: colors.textPrimary }]}>1000+</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Papers</Text>
+        </View>
+        <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+        <View style={styles.statItem}>
+          <Ionicons name="people-outline" size={20} color={colors.accent} />
+          <Text style={[styles.statNumber, { color: colors.textPrimary }]}>50K+</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Students</Text>
+        </View>
+        <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+        <View style={styles.statItem}>
+          <Ionicons name="flash-outline" size={20} color={colors.featureGreen} />
+          <Text style={[styles.statNumber, { color: colors.textPrimary }]}>Fast</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Downloads</Text>
         </View>
       </View>
 
@@ -378,10 +396,10 @@ export default function HomeScreen() {
 
       {/* ─── Stats ────────────────────────────────────────────── */}
       <View style={styles.section}>
-        <View style={styles.statsCard}>
-          <View style={styles.statsHeader}>
+        <View style={[styles.statsCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <View style={[styles.statsHeader, { borderBottomColor: colors.borderLight }]}>
             <Ionicons name="pulse" size={18} color={colors.primary} />
-            <Text style={styles.statsHeaderText}>At a Glance</Text>
+            <Text style={[styles.statsHeaderText, { color: colors.textPrimary }]}>At a Glance</Text>
           </View>
           <View style={styles.statsRow}>
             {STATS.map((item, i) => (
@@ -400,7 +418,7 @@ export default function HomeScreen() {
           title="What You Can Do"
           subtitle="Available right now"
         />
-        <View style={styles.featuresCard}>
+        <View style={[styles.featuresCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           {FEATURES.map((item, i) => (
             <FeatureRow
               key={i}
@@ -420,7 +438,7 @@ export default function HomeScreen() {
           title="Get Started"
           subtitle="4 simple steps"
         />
-        <View style={styles.stepsCard}>
+        <View style={[styles.stepsCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           {STEPS.map((item, i) => (
             <StepItem key={i} item={item} isLast={i === STEPS.length - 1} />
           ))}
@@ -448,8 +466,8 @@ export default function HomeScreen() {
             <Ionicons name="bulb" size={20} color="#F59E0B" />
           </View>
           <View style={styles.suggestText}>
-            <Text style={styles.suggestTitle}>Have an idea?</Text>
-            <Text style={styles.suggestDesc}>
+            <Text style={[styles.suggestTitle, { color: colors.textPrimary }]}>Have an idea?</Text>
+            <Text style={[styles.suggestDesc, { color: colors.textSecondary }]}>
               We're building this for you. Share your suggestions!
             </Text>
           </View>
@@ -461,43 +479,12 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ─── About ────────────────────────────────────────────── */}
-      <View style={styles.section}>
-        <SectionHeader
-          icon="information-circle"
-          iconColor="#0284C7"
-          iconBg="rgba(2, 132, 199, 0.10)"
-          title="About NIT Kurukshetra"
-          subtitle="Est. 1963"
-        />
-        <View style={styles.aboutCard}>
-          <Text style={styles.aboutText}>
-            National Institute of Technology Kurukshetra is an Institution of
-            National Importance established in 1963 — one of India's premier
-            engineering institutes offering UG, PG, and doctoral programs.
-          </Text>
-          <TouchableOpacity
-            style={styles.websiteBtn}
-            onPress={handleWebsitePress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="globe-outline" size={16} color={colors.white} />
-            <Text style={styles.websiteBtnText}>nitkkr.ac.in</Text>
-            <Ionicons
-              name="open-outline"
-              size={12}
-              color="rgba(255,255,255,0.6)"
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* ─── Footer ───────────────────────────────────────────── */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
+        <Text style={[styles.footerText, { color: colors.textTertiary }]}>
           Made with ❤️ for NIT Kurukshetra students
         </Text>
-        <Text style={styles.footerVersion}>
+        <Text style={[styles.footerVersion, { color: colors.textTertiary }]}>
           {config.APP_NAME} v{config.APP_VERSION}
         </Text>
       </View>
@@ -519,103 +506,39 @@ const CARD_SHADOW = {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    // backgroundColor handled inline
   },
   contentContainer: {
     paddingBottom: 140, // room for floating tab bar
   },
 
-  // ─── Hero ──────────────────────────────────────────────────
-  hero: {
-    backgroundColor: colors.primary,
-    overflow: "hidden",
-    position: "relative",
-  },
-  heroCircle1: {
-    position: "absolute",
-    top: -40,
-    right: -40,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  heroCircle2: {
-    position: "absolute",
-    bottom: -30,
-    left: -30,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
-  heroInner: {
-    alignItems: "center",
-    paddingTop: 28,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
-  },
-  heroLogoWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    elevation: 8,
-    shadowColor: "rgba(0,0,0,0.3)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    borderWidth: 2.5,
-    borderColor: "rgba(255,255,255,0.20)",
-  },
-  heroLogo: {
-    width: 58,
-    height: 58,
-  },
-  heroTitle: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: colors.textInverse,
-    letterSpacing: 1.5,
-    textAlign: "center",
-  },
-  heroBadge: {
+  // ─── Stats Bar (Replaces Hero) ─────────────────────────────
+  statsBar: {
     flexDirection: "row",
+    justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.10)",
-    paddingVertical: 5,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    marginTop: 10,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
   },
-  heroBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.accentLight,
+  statItem: {
+    alignItems: "center",
+    gap: spacing.xs,
   },
-  heroBadgeText: {
-    fontSize: 12,
+  statNumber: {
+    fontSize: 18,
     fontWeight: "700",
-    color: colors.accentLight,
-    letterSpacing: 1.2,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: "500",
     textTransform: "uppercase",
   },
-  heroDesc: {
-    fontSize: 14.5,
-    fontWeight: "400",
-    color: "rgba(255,255,255,0.72)",
-    textAlign: "center",
-    lineHeight: 21,
-    marginTop: 14,
-    maxWidth: 260,
+  statDivider: {
+    width: 1,
+    height: 40,
   },
+
 
   // ─── Sections ──────────────────────────────────────────────
   section: {
@@ -638,13 +561,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: colors.textPrimary,
+    // color handled inline
     letterSpacing: 0.1,
   },
   sectionSubtitle: {
     fontSize: 12,
     fontWeight: "500",
-    color: colors.textTertiary,
+    // color handled inline
     marginTop: 1,
   },
 
@@ -656,13 +579,12 @@ const styles = StyleSheet.create({
   },
   quickCard: {
     width: (SCREEN_WIDTH - 32 - 12) / 2,
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: CARD_RADIUS,
     paddingVertical: 20,
     paddingHorizontal: 16,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
     ...CARD_SHADOW,
   },
   quickIconWrap: {
@@ -676,24 +598,24 @@ const styles = StyleSheet.create({
   quickLabel: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.textPrimary,
+    // color handled inline
     textAlign: "center",
   },
   quickSub: {
     fontSize: 11,
     fontWeight: "500",
-    color: colors.textTertiary,
+    // color handled inline
     marginTop: 3,
     textAlign: "center",
   },
 
   // ─── Stats Card ────────────────────────────────────────────
   statsCard: {
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: CARD_RADIUS,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
     ...CARD_SHADOW,
   },
   statsHeader: {
@@ -703,12 +625,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    // borderBottomColor handled inline
   },
   statsHeaderText: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.textPrimary,
+    // color handled inline
     letterSpacing: 0.2,
   },
   statsRow: {
@@ -719,12 +641,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "column",
     alignItems: "center",
-    backgroundColor: colors.background,
+    // backgroundColor handled inline
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 6,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
   },
   statIconWrap: {
     width: 36,
@@ -740,23 +662,23 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 17,
     fontWeight: "800",
-    color: colors.textPrimary,
+    // color handled inline
   },
   statLabel: {
     fontSize: 10.5,
     fontWeight: "600",
-    color: colors.textTertiary,
+    // color handled inline
     marginTop: 2,
     textAlign: "center",
   },
 
   // ─── Features Card ─────────────────────────────────────────
   featuresCard: {
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: CARD_RADIUS,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
     ...CARD_SHADOW,
   },
   featureRow: {
@@ -767,7 +689,7 @@ const styles = StyleSheet.create({
   },
   featureRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    // borderBottomColor handled inline
   },
   featureIconWrap: {
     width: 40,
@@ -783,24 +705,24 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.textPrimary,
+    // color handled inline
     marginBottom: 2,
   },
   featureDesc: {
     fontSize: 12.5,
     fontWeight: "400",
-    color: colors.textSecondary,
+    // color handled inline
     lineHeight: 17,
   },
 
   // ─── Steps Card ────────────────────────────────────────────
   stepsCard: {
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: CARD_RADIUS,
     padding: 16,
     paddingTop: 18,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
     ...CARD_SHADOW,
   },
   stepRow: {
@@ -821,12 +743,12 @@ const styles = StyleSheet.create({
   stepNum: {
     fontSize: 12,
     fontWeight: "800",
-    color: colors.white,
+    // color handled inline
   },
   stepLine: {
     width: 2,
     flex: 1,
-    backgroundColor: colors.borderLight,
+    // backgroundColor handled inline
     marginVertical: 4,
   },
   stepContent: {
@@ -843,12 +765,12 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.textPrimary,
+    // color handled inline
   },
   stepDesc: {
     fontSize: 12.5,
     fontWeight: "400",
-    color: colors.textSecondary,
+    // color handled inline
     lineHeight: 17,
     paddingLeft: 21,
   },
@@ -860,16 +782,23 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 14,
   },
+  featureCard: {
+    width: (SCREEN_WIDTH - 32 - 24) / 3,
+    // backgroundColor handled inline
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 110,
+  },
   comingChip: {
     width: (SCREEN_WIDTH - 32 - 20) / 3,
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 8,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...CARD_SHADOW,
   },
   comingIconWrap: {
     width: 36,
@@ -882,7 +811,7 @@ const styles = StyleSheet.create({
   comingTitle: {
     fontSize: 11.5,
     fontWeight: "700",
-    color: colors.textPrimary,
+    // color handled inline
     textAlign: "center",
     marginBottom: 6,
   },
@@ -923,52 +852,46 @@ const styles = StyleSheet.create({
   suggestTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: colors.textPrimary,
+    // color handled inline
   },
   suggestDesc: {
     fontSize: 11.5,
     fontWeight: "400",
-    color: colors.textSecondary,
+    // color handled inline
     marginTop: 2,
     lineHeight: 16,
   },
 
   // ─── About Card ────────────────────────────────────────────
   aboutCard: {
-    backgroundColor: colors.surface,
+    // backgroundColor handled inline
     borderRadius: CARD_RADIUS,
     padding: 18,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor handled inline
     ...CARD_SHADOW,
   },
   aboutText: {
     fontSize: 13.5,
     fontWeight: "400",
-    color: colors.textSecondary,
+    // color handled inline
     lineHeight: 20,
     marginBottom: 16,
   },
   websiteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primary,
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 10,
     gap: 8,
-    alignSelf: "center",
-    elevation: 3,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    alignSelf: "flex-start",
+    marginTop: 12,
   },
   websiteBtnText: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "700",
-    color: colors.white,
+    color: "#FFFFFF",
   },
 
   // ─── Footer ────────────────────────────────────────────────
@@ -981,13 +904,13 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 12,
     fontWeight: "500",
-    color: colors.textTertiary,
+    // color handled inline
     textAlign: "center",
   },
   footerVersion: {
     fontSize: 10.5,
     fontWeight: "400",
-    color: colors.textTertiary,
+    // color handled inline
     marginTop: 4,
     opacity: 0.6,
   },

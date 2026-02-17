@@ -10,23 +10,24 @@ import {
 import PaperCard from "./PaperCard";
 import LoadMoreButton from "../common/LoadMoreButton";
 import EmptyState from "../common/EmptyState";
-import { colors } from "../../theme";
+import { useTheme } from "../../context/ThemeContext";
 import { spacing, typography } from "../../theme/spacing";
 import { looksLikeSubjectName } from "../../constants/subjectNames";
 
 // ─── Skeleton Loader for initial loading state ───────────────
 
 function SkeletonCard() {
+  const { colors } = useTheme();
   return (
     <View style={styles.skeletonWrapper}>
-      <View style={styles.skeletonCard}>
+      <View style={[styles.skeletonCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         {/* Top row skeleton */}
         <View style={styles.skeletonTopRow}>
-          <View style={[styles.skeletonBlock, { width: 100, height: 22 }]} />
+          <View style={[styles.skeletonBlock, { width: 100, height: 22, backgroundColor: colors.skeleton }]} />
           <View
             style={[
               styles.skeletonBlock,
-              { width: 60, height: 22, borderRadius: 12 },
+              { width: 60, height: 22, borderRadius: 12, backgroundColor: colors.skeleton },
             ]}
           />
         </View>
@@ -36,39 +37,39 @@ function SkeletonCard() {
           <View
             style={[
               styles.skeletonBlock,
-              { width: 70, height: 20, borderRadius: 10 },
+              { width: 70, height: 20, borderRadius: 10, backgroundColor: colors.skeleton },
             ]}
           />
           <View
             style={[
               styles.skeletonBlock,
-              { width: 30, height: 20, borderRadius: 10 },
+              { width: 30, height: 20, borderRadius: 10, backgroundColor: colors.skeleton },
             ]}
           />
           <View
             style={[
               styles.skeletonBlock,
-              { width: 45, height: 20, borderRadius: 10 },
+              { width: 45, height: 20, borderRadius: 10, backgroundColor: colors.skeleton },
             ]}
           />
         </View>
 
         {/* Info row skeleton */}
         <View style={styles.skeletonInfoRow}>
-          <View style={[styles.skeletonBlock, { width: 80, height: 14 }]} />
-          <View style={[styles.skeletonBlock, { width: 50, height: 14 }]} />
+          <View style={[styles.skeletonBlock, { width: 80, height: 14, backgroundColor: colors.skeleton }]} />
+          <View style={[styles.skeletonBlock, { width: 50, height: 14, backgroundColor: colors.skeleton }]} />
         </View>
 
         {/* Divider */}
-        <View style={styles.skeletonDivider} />
+        <View style={[styles.skeletonDivider, { backgroundColor: colors.borderLight }]} />
 
         {/* Bottom row skeleton */}
         <View style={styles.skeletonBottomRow}>
-          <View style={[styles.skeletonBlock, { width: 140, height: 12 }]} />
+          <View style={[styles.skeletonBlock, { width: 140, height: 12, backgroundColor: colors.skeleton }]} />
           <View
             style={[
               styles.skeletonBlock,
-              { width: 110, height: 36, borderRadius: 8 },
+              { width: 110, height: 36, borderRadius: 8, backgroundColor: colors.skeleton },
             ]}
           />
         </View>
@@ -111,11 +112,13 @@ const ResultsHeader = memo(function ResultsHeader({
   totalRecords,
   hasFilters,
 }) {
+  const { colors } = useTheme();
+
   if (totalRecords === 0) return null;
 
   return (
     <View style={styles.resultsHeader}>
-      <Text style={styles.resultsText}>
+      <Text style={[styles.resultsText, { color: colors.textSecondary }]}>
         {totalRecords} paper{totalRecords !== 1 ? "s" : ""} found
         {hasFilters ? " (filtered)" : ""}
       </Text>
@@ -150,6 +153,7 @@ function PaperList({
   onResetFilters,
   ListHeaderComponent,
 }) {
+  const { colors } = useTheme();
   const { currentPage = 1, totalRecords = 0, hasMore = false } = pagination;
 
   // ─── Render individual paper card ───────────────────────────
@@ -239,7 +243,7 @@ function PaperList({
       data={papers}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[
         styles.contentContainer,
         papers.length === 0 && styles.emptyContentContainer,
@@ -289,7 +293,7 @@ function PaperList({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    // backgroundColor: colors.background, // handled inline
   },
 
   contentContainer: {
@@ -317,7 +321,7 @@ const styles = StyleSheet.create({
   resultsText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textSecondary,
+    // color: colors.textSecondary, // handled inline
     letterSpacing: typography.letterSpacing.normal,
   },
 
@@ -333,15 +337,15 @@ const styles = StyleSheet.create({
   },
 
   skeletonCard: {
-    backgroundColor: colors.surface,
+    // backgroundColor: colors.surface, // handled inline
     borderRadius: spacing.cardRadius,
     padding: spacing.cardPadding,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    // borderColor: colors.borderLight, // handled inline
   },
 
   skeletonBlock: {
-    backgroundColor: colors.skeleton,
+    // backgroundColor: colors.skeleton, // handled inline
     borderRadius: 4,
   },
 
@@ -366,7 +370,7 @@ const styles = StyleSheet.create({
 
   skeletonDivider: {
     height: 1,
-    backgroundColor: colors.borderLight,
+    // backgroundColor: colors.borderLight, // handled inline
     marginBottom: spacing.md,
   },
 

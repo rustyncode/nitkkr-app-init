@@ -133,7 +133,7 @@ const lightColors = {
 // Dark Theme
 const darkColors = {
   // Primary brand — rich indigo (slightly lighter effectively in dark mode)
-  primary: "#4E66E0", 
+  primary: "#4E66E0",
   primaryLight: "#6B7DFF",
   primaryDark: "#1E2A78",
   primaryFaded: "rgba(78, 102, 224, 0.15)",
@@ -169,8 +169,8 @@ const darkColors = {
   // Neutrals
   white: "#FFFFFF",
   black: "#000000",
-  background: "#0F172A", // Dark slate
-  surface: "#1E293B",    // Slightly lighter slate
+  background: "#020617", // Deeper slate/black
+  surface: "#0F172A",    // Slate 900
   surfaceAlt: "#334155", // Even lighter
   surfaceElevated: "#334155",
 

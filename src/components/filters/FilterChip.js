@@ -1,6 +1,6 @@
 import React from "react";
 import { TouchableOpacity, Text, StyleSheet } from "react-native";
-import { colors } from "../../theme";
+import { useTheme } from "../../context/ThemeContext";
 import { spacing, typography } from "../../theme/spacing";
 
 export default function FilterChip({
@@ -8,12 +8,18 @@ export default function FilterChip({
   value,
   isActive = false,
   onPress,
-  activeColor = colors.primary,
-  activeBgColor = colors.primaryFaded,
+  activeColor,
+  activeBgColor,
   icon = null,
   size = "md",
   disabled = false,
 }) {
+  const { colors } = useTheme();
+
+  // Use theme colors as defaults if not provided
+  const finalActiveColor = activeColor || colors.primary;
+  const finalActiveBgColor = activeBgColor || colors.primaryFaded;
+
   const handlePress = () => {
     if (!disabled && onPress) {
       onPress(value);
@@ -30,11 +36,16 @@ export default function FilterChip({
       style={[
         styles.chip,
         sizeStyles.chip,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          shadowColor: colors.shadow,
+        },
         isActive && [
           styles.chipActive,
           {
-            backgroundColor: activeBgColor,
-            borderColor: activeColor,
+            backgroundColor: finalActiveBgColor,
+            borderColor: finalActiveColor,
           },
         ],
         disabled && styles.chipDisabled,
@@ -44,7 +55,8 @@ export default function FilterChip({
         <Text
           style={[
             styles.icon,
-            isActive && { color: activeColor },
+            { color: colors.textSecondary },
+            isActive && { color: finalActiveColor },
             disabled && styles.textDisabled,
           ]}
         >
@@ -56,8 +68,9 @@ export default function FilterChip({
         style={[
           styles.label,
           sizeStyles.label,
-          isActive && [styles.labelActive, { color: activeColor }],
-          disabled && styles.textDisabled,
+          { color: colors.textSecondary },
+          isActive && [styles.labelActive, { color: finalActiveColor }],
+          disabled && [styles.textDisabled, { color: colors.textTertiary }],
         ]}
         numberOfLines={1}
       >
@@ -105,12 +118,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surface,
     borderWidth: 1.5,
-    borderColor: colors.border,
     gap: spacing.xs,
     elevation: 1,
-    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.6,
     shadowRadius: 2,
@@ -128,12 +138,10 @@ const styles = StyleSheet.create({
 
   icon: {
     fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
   },
 
   label: {
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
     letterSpacing: typography.letterSpacing.normal,
   },
 
@@ -142,6 +150,5 @@ const styles = StyleSheet.create({
   },
 
   textDisabled: {
-    color: colors.textTertiary,
   },
 });

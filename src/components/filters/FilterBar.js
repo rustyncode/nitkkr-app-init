@@ -1,4 +1,5 @@
 import React, { memo } from "react";
+import { useTheme } from "../../context/ThemeContext";
 import {
   View,
   Text,
@@ -8,7 +9,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FilterChip from "./FilterChip";
-import { colors } from "../../theme";
 import { spacing, typography } from "../../theme/spacing";
 
 // ─── Department code → short display labels ──────────────────
@@ -54,9 +54,10 @@ const CATEGORY_LABELS = {
 // ─── Filter Row Component ────────────────────────────────────
 
 const FilterRow = memo(function FilterRow({ label, children }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.filterRow}>
-      <Text style={styles.filterLabel}>{label}</Text>
+      <Text style={[styles.filterLabel, { color: colors.textTertiary }]}>{label}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -80,6 +81,7 @@ function FilterBar({
   expanded = true,
   onToggleExpand,
 }) {
+  const { colors } = useTheme();
   if (!filterOptions) return null;
 
   const {
@@ -98,7 +100,7 @@ function FilterBar({
   const showMidsemRow = filters.examType === "Mid Semester";
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
       {/* ─── Toggle Header ──────────────────────────────────── */}
       <TouchableOpacity
         style={styles.toggleHeader}
@@ -111,10 +113,10 @@ function FilterBar({
             size={spacing.iconMd}
             color={colors.primary}
           />
-          <Text style={styles.toggleText}>Filters</Text>
+          <Text style={[styles.toggleText, { color: colors.textPrimary }]}>Filters</Text>
           {activeFilterCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{activeFilterCount}</Text>
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.badgeText, { color: colors.white }]}>{activeFilterCount}</Text>
             </View>
           )}
         </View>
@@ -127,7 +129,7 @@ function FilterBar({
               activeOpacity={0.6}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.clearText}>Clear All</Text>
+              <Text style={[styles.clearText, { color: colors.error }]}>Clear All</Text>
             </TouchableOpacity>
           )}
           <Ionicons
@@ -312,13 +314,14 @@ function FilterBar({
 // ─── Small pill showing an active filter (collapsed mode) ────
 
 function ActiveChipPill({ label, onRemove }) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity
       onPress={onRemove}
-      style={styles.activePill}
+      style={[styles.activePill, { backgroundColor: colors.primaryFaded, borderColor: colors.primaryLight }]}
       activeOpacity={0.7}
     >
-      <Text style={styles.activePillText}>{label}</Text>
+      <Text style={[styles.activePillText, { color: colors.primary }]}>{label}</Text>
       <Ionicons name="close-circle" size={14} color={colors.primaryLight} />
     </TouchableOpacity>
   );
@@ -328,9 +331,7 @@ function ActiveChipPill({ label, onRemove }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
 
   // Toggle header
@@ -351,11 +352,9 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
   },
 
   badge: {
-    backgroundColor: colors.primary,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -367,7 +366,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.bold,
-    color: colors.white,
   },
 
   toggleRight: {
@@ -384,7 +382,6 @@ const styles = StyleSheet.create({
   clearText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.error,
   },
 
   // Filter body (expanded)
@@ -400,7 +397,6 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textTertiary,
     textTransform: "uppercase",
     letterSpacing: typography.letterSpacing.wider,
     paddingHorizontal: spacing.screenHorizontal,
@@ -426,20 +422,17 @@ const styles = StyleSheet.create({
   activePill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.primaryFaded,
     borderRadius: 14,
     paddingVertical: spacing.xs,
     paddingLeft: spacing.sm + 2,
     paddingRight: spacing.sm,
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.primaryLight,
   },
 
   activePillText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.primary,
   },
 });
 
