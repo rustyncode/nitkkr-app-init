@@ -40,11 +40,11 @@ export const getSubjects = async () => {
     }
 };
 
-export const addSubject = async (name, code, color = "#3B82F6") => {
+export const addSubject = async (name, code, color = "#3B82F6", required = 75.0) => {
     try {
         const result = await db.runAsync(
-            'INSERT INTO subjects (name, code, color_code) VALUES (?, ?, ?)',
-            [name, code, color]
+            'INSERT INTO subjects (name, code, color_code, required_percentage) VALUES (?, ?, ?, ?)',
+            [name, code, color, required]
         );
         return result.lastInsertRowId;
     } catch (e) {

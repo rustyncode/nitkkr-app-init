@@ -158,7 +158,7 @@ export async function fetchPapers(options = {}) {
   const response = await request(config.ENDPOINTS.PAPERS, options);
   return {
     data: response.data || [],
-    pagination: response.pagination || {},
+    pagination: (response.meta && response.meta.pagination) || {},
   };
 }
 
@@ -186,7 +186,7 @@ export async function fetchAllPapers() {
     const data = response.data || [];
     allRecords.push(...data);
 
-    const pagination = response.pagination || {};
+    const pagination = (response.meta && response.meta.pagination) || {};
     hasMore = pagination.hasMore === true && data.length > 0;
     page++;
 
@@ -260,7 +260,9 @@ export async function fetchNotifications(options = {}) {
     total: response.total || 0,
     days: response.days || 30,
     fromCache: response.fromCache || false,
-    lastFetched: response.lastFetched || null,
+    lastFetched: (response.meta && response.meta.lastFetched) || null,
+    hash: response.meta && response.meta.hash,
+    hasUpdates: response.meta && response.meta.hasUpdates,
   };
 }
 
@@ -274,9 +276,9 @@ export async function fetchNotificationCategories() {
  *
  * @returns {Promise<Array>}
  */
-export async function fetchJobs() {
-  const response = await request(config.ENDPOINTS.JOBS);
-  return response.data || [];
+export async function fetchJobs(params = {}) {
+  const response = await request(config.ENDPOINTS.JOBS, params);
+  return response;
 }
 
 /**
@@ -323,6 +325,7 @@ export async function fetchPapersCached(options = {}, cacheOpts = {}) {
   return cachedFetch(cacheKey, fetchPapers, [options], CACHE_TTL.PAPERS, {
     forceRefresh: cacheOpts.forceRefresh || false,
     onFreshData: cacheOpts.onFreshData,
+    useHashSync: false, // Standard pagination usually doesn't need global hash sync
   });
 }
 
@@ -346,7 +349,7 @@ export async function fetchAllPapersCached({
     fetchAllPapers,
     [],
     PAPERS_ALL_TTL,
-    { forceRefresh, onFreshData },
+    { forceRefresh, onFreshData, useHashSync: false },
   );
   // Attach cachedAt from the cache entry if available
   if (result.fromCache) {
@@ -377,7 +380,7 @@ export async function fetchNotificationsCached(
     fetchNotifications,
     [options],
     CACHE_TTL.NOTIFICATIONS,
-    { forceRefresh, onFreshData },
+    { forceRefresh, onFreshData, useHashSync: true },
   );
 }
 
@@ -411,6 +414,7 @@ export async function fetchJobsCached({ forceRefresh = false, onFreshData } = {}
   return cachedFetch(cacheKey, fetchJobs, [], 30 * 60 * 1000, {
     forceRefresh,
     onFreshData,
+    useHashSync: true,
   });
 }
 

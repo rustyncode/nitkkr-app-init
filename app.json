@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "NIT KKR",
-    "slug": "nitkkr-pyq",
+    "name": "RustiNet",
+    "slug": "rustinet",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,26 +10,31 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2C3E9B"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.rustinet.app",
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
-        ]
+        ],
+        "NSPhotoLibraryAddUsageDescription": "RustiNet needs access to save files to your device."
       }
     },
     "android": {
+      "package": "com.rustinet.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2C3E9B"
+        "backgroundColor": "#141D52"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
         "CAMERA",
         "NOTIFICATIONS",
-        "VIBRATE"
+        "VIBRATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ],
       "useNextNotificationsApi": true
     },
@@ -47,6 +52,11 @@
         }
       ],
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1f39e34d-a2b4-499d-8d7f-ad8b42ec9e68"
+      }
+    }
   }
 }

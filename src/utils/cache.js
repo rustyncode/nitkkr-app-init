@@ -1,4 +1,4 @@
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
 
 // ─── Cache directory ────────────────────────────────────────
 
@@ -73,14 +73,13 @@ export function buildCacheKey(prefix, params = {}) {
   return `${prefix}_${paramStr}`;
 }
 
-// ─── Write data to cache ────────────────────────────────────
-
-export async function setCache(key, data, ttlMs) {
+export async function setCache(key, data, ttlMs, options = {}) {
   try {
     await ensureCacheDir();
 
     const entry = {
       data,
+      hash: options.hash || null,
       cachedAt: Date.now(),
       expiresAt: Date.now() + ttlMs,
       ttlMs,
@@ -127,6 +126,7 @@ export async function getCache(key, { allowStale = true } = {}) {
 
     return {
       data: entry.data,
+      hash: entry.hash || null,
       isStale,
       cachedAt: entry.cachedAt,
       age: now - entry.cachedAt,
@@ -298,33 +298,47 @@ export async function cachedFetch(
   fetchFn,
   fetchArgs = [],
   ttlMs = CACHE_TTL.PAPERS,
-  { onFreshData, forceRefresh = false } = {},
+  { onFreshData, forceRefresh = false, useHashSync = false } = {},
 ) {
   // 1. Try cache first (unless force refresh)
   if (!forceRefresh) {
     const cached = await getCache(cacheKey, { allowStale: true });
 
     if (cached) {
-      if (!cached.isStale) {
+      if (!cached.isStale && !useHashSync) {
         // Fresh cache — return directly
-        return { data: cached.data, fromCache: true, isStale: false };
+        return { data: cached.data, fromCache: true, isStale: false, hash: cached.hash };
       }
 
-      // Stale cache — return it, but refresh in background
+      // Stale cache OR hash sync requested — return it, but check for updates
       const staleResult = {
         data: cached.data,
         fromCache: true,
-        isStale: true,
+        isStale: cached.isStale,
+        hash: cached.hash,
       };
 
-      // Background refresh
+      // Background sync
       (async () => {
         try {
-          const freshData = Array.isArray(fetchArgs)
-            ? await fetchFn(...fetchArgs)
-            : await fetchFn(fetchArgs);
-          await setCache(cacheKey, freshData, ttlMs);
-          if (onFreshData) onFreshData(freshData);
+          const args = Array.isArray(fetchArgs) ? fetchArgs : [fetchArgs];
+          const finalArgs = useHashSync ? [...args, { clientHash: cached.hash }] : args;
+
+          const response = await fetchFn(...finalArgs);
+
+          // If response says no updates, just update the expiration
+          if (useHashSync && response.hasUpdates === false) {
+            console.log("[Cache] No updates for", cacheKey);
+            await setCache(cacheKey, cached.data, ttlMs, { hash: cached.hash });
+            return;
+          }
+
+          // Otherwise store the fresh data
+          const freshData = useHashSync ? response.data : response;
+          const freshHash = useHashSync ? response.hash : null;
+
+          await setCache(cacheKey, freshData, ttlMs, { hash: freshHash });
+          if (onFreshData) onFreshData({ data: freshData, hash: freshHash });
         } catch (err) {
           console.warn(
             "[Cache] Background refresh failed for",
@@ -340,11 +354,12 @@ export async function cachedFetch(
   }
 
   // 2. No cache (or force refresh) — fetch fresh
-  const freshData = Array.isArray(fetchArgs)
-    ? await fetchFn(...fetchArgs)
-    : await fetchFn(fetchArgs);
-  await setCache(cacheKey, freshData, ttlMs);
-  return { data: freshData, fromCache: false, isStale: false };
+  const response = await (Array.isArray(fetchArgs) ? fetchFn(...fetchArgs) : fetchFn(fetchArgs));
+  const data = useHashSync ? response.data : response;
+  const hash = useHashSync ? response.hash : null;
+
+  await setCache(cacheKey, data, ttlMs, { hash });
+  return { data, fromCache: false, isStale: false, hash };
 }
 
 // ─── Exports ────────────────────────────────────────────────

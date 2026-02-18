@@ -17,15 +17,17 @@
 //   ✅ Works with Expo Go (no dev build required for local notifs)
 //   ✅ Works offline (gracefully skips if no network)
 
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
 import { Platform } from "react-native";
 import config from "../constants/config";
-import { notifyNewCollegeAlerts } from "./notifications";
+import { notifyNewCollegeAlerts, notifyNewJobs, notifyNewPapers } from "./notifications";
 
 // ─── File paths for persistent storage ──────────────────────
 
 const TRACKER_DIR = FileSystem.documentDirectory + "notification_tracker/";
 const HASH_FILE = TRACKER_DIR + "digest_hash.json";
+const JOBS_HASH_FILE = TRACKER_DIR + "jobs_hash.json";
+const PAPERS_HASH_FILE = TRACKER_DIR + "papers_hash.json";
 const SEEN_TITLES_FILE = TRACKER_DIR + "seen_titles.json";
 const TRACKER_META_FILE = TRACKER_DIR + "tracker_meta.json";
 
@@ -131,23 +133,35 @@ function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
   });
 }
 
-// ─── Load cached hash from disk ─────────────────────────────
+// ─── Generalized Hash Helpers ─────────────────────────────
 
-async function getCachedHash() {
-  if (_cachedHash !== null) return _cachedHash;
-
-  const data = await readJSON(HASH_FILE, { hash: null, savedAt: null });
-  _cachedHash = data.hash;
-  return _cachedHash;
+async function getHashForType(type) {
+  let file;
+  switch (type) {
+    case 'jobs': file = JOBS_HASH_FILE; break;
+    case 'papers': file = PAPERS_HASH_FILE; break;
+    default: file = HASH_FILE;
+  }
+  const data = await readJSON(file, { hash: null, savedAt: null });
+  return data.hash;
 }
 
-async function saveCachedHash(hash) {
-  _cachedHash = hash;
-  return writeJSON(HASH_FILE, {
+async function saveHashForType(type, hash) {
+  let file;
+  switch (type) {
+    case 'jobs': file = JOBS_HASH_FILE; break;
+    case 'papers': file = PAPERS_HASH_FILE; break;
+    default: file = HASH_FILE;
+  }
+  return writeJSON(file, {
     hash,
     savedAt: new Date().toISOString(),
   });
 }
+
+// Keep legacy ones for compatibility if needed elsewhere
+async function getCachedHash() { return getHashForType('alerts'); }
+async function saveCachedHash(hash) { return saveHashForType('alerts', hash); }
 
 // ─── Load/Save seen titles ──────────────────────────────────
 
@@ -194,20 +208,65 @@ async function getTrackerMeta() {
   });
 }
 
+// ─── Check specific sources ─────────────────────────────────
+
+async function checkJobsSync(baseUrl) {
+  try {
+    const localHash = await getHashForType('jobs');
+    const url = `${baseUrl}/jobs${localHash ? `?clientHash=${localHash}` : ""}`;
+    const response = await fetchWithTimeout(url);
+
+    if (!response.ok) return { newCount: 0, items: [] };
+
+    const json = await response.json();
+    if (json.hasUpdates === false) return { newCount: 0, items: [] };
+
+    const jobs = json.data || [];
+    const serverHash = json.hash;
+
+    if (jobs.length > 0 && localHash !== null) {
+      // It's a real update
+      await saveHashForType('jobs', serverHash);
+      return { newCount: jobs.length, items: jobs };
+    }
+
+    // Seed or no new data
+    await saveHashForType('jobs', serverHash);
+    return { newCount: 0, items: [] };
+  } catch (err) {
+    console.warn("[NotifTracker] Jobs sync failed:", err.message);
+    return { newCount: 0, items: [] };
+  }
+}
+
+async function checkPapersSync(baseUrl) {
+  try {
+    const localHash = await getHashForType('papers');
+    const url = `${baseUrl}/papers/all${localHash ? `?clientHash=${localHash}` : ""}`;
+    const response = await fetchWithTimeout(url);
+
+    if (!response.ok) return { newCount: 0, items: [] };
+
+    const json = await response.json();
+    if (json.hasUpdates === false) return { newCount: 0, items: [] };
+
+    const papers = json.data || [];
+    const serverHash = json.hash;
+
+    if (papers.length > 0 && localHash !== null) {
+      await saveHashForType('papers', serverHash);
+      return { newCount: papers.length, items: papers };
+    }
+
+    await saveHashForType('papers', serverHash);
+    return { newCount: 0, items: [] };
+  } catch (err) {
+    console.warn("[NotifTracker] Papers sync failed:", err.message);
+    return { newCount: 0, items: [] };
+  }
+}
+
 // ─── Core: Check for new notifications ──────────────────────
-//
-// This is the MAIN function. Call it on app open.
-//
-// Returns:
-//   {
-//     checked: boolean      — whether a check was actually performed
-//     hasNew: boolean       — whether new notifications were found
-//     newCount: number      — how many new notifications
-//     newItems: Array       — the new notification items (title, date, category)
-//     hash: string          — the current digest hash
-//     skipped: boolean      — true if skipped due to cooldown
-//     error: string|null    — error message if failed
-//   }
 
 async function checkForNewNotifications({ force = false } = {}) {
   // Prevent concurrent polling
@@ -414,17 +473,37 @@ async function checkForNewNotifications({ force = false } = {}) {
 
     await saveCachedHash(serverHash);
     await saveSeenTitles(seenTitles);
+
+    // ─── Step 7: Cross-Module Sync (Jobs & Papers) ───────────
+    console.log("[NotifTracker] Syncing other modules...");
+    const jobsResult = await checkJobsSync(baseUrl);
+    const papersResult = await checkPapersSync(baseUrl);
+
+    if (jobsResult.newCount > 0) {
+      await notifyNewJobs(jobsResult.newCount, jobsResult.items[0]?.title);
+    }
+
+    if (papersResult.newCount > 0) {
+      // Small delay so notifications don't overlap as much
+      await new Promise(r => setTimeout(r, 1000));
+      await notifyNewPapers(papersResult.newCount, papersResult.items[0]?.dept_name);
+    }
+
     await saveTrackerMeta({
       lastPollAt: new Date().toISOString(),
       lastHash: serverHash,
       lastNewCount: isFirstSync ? 0 : newItems.length,
+      lastJobsCount: jobsResult.newCount,
+      lastPapersCount: papersResult.newCount,
       totalChecks: (trackerMeta.totalChecks || 0) + 1,
       totalNewDetected:
         (trackerMeta.totalNewDetected || 0) +
-        (isFirstSync ? 0 : newItems.length),
+        (isFirstSync ? 0 : newItems.length) +
+        jobsResult.newCount +
+        papersResult.newCount,
       lastResult: isFirstSync
         ? "first_sync"
-        : newItems.length > 0
+        : (newItems.length > 0 || jobsResult.newCount > 0 || papersResult.newCount > 0)
           ? "new_found"
           : "hash_changed_no_new",
       seenTitlesCount: seenTitles.size,
@@ -432,9 +511,12 @@ async function checkForNewNotifications({ force = false } = {}) {
 
     return {
       checked: true,
-      hasNew: !isFirstSync && newItems.length > 0,
-      newCount: isFirstSync ? 0 : newItems.length,
+      hasNew: !isFirstSync && (newItems.length > 0 || jobsResult.newCount > 0 || papersResult.newCount > 0),
+      newCount: (isFirstSync ? 0 : newItems.length) + jobsResult.newCount + papersResult.newCount,
       newItems: isFirstSync ? [] : newItems,
+      alertsCount: isFirstSync ? 0 : newItems.length,
+      jobsCount: jobsResult.newCount,
+      papersCount: papersResult.newCount,
       hash: serverHash,
       isFirstSync,
     };
@@ -486,6 +568,8 @@ async function getTrackerStats() {
     seenTitlesCount: seenTitles.size,
     lastPollAt: meta.lastPollAt,
     lastNewCount: meta.lastNewCount || 0,
+    lastJobsCount: meta.lastJobsCount || 0,
+    lastPapersCount: meta.lastPapersCount || 0,
     totalChecks: meta.totalChecks || 0,
     totalNewDetected: meta.totalNewDetected || 0,
     lastResult: meta.lastResult || "none",

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   Linking,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import { spacing, typography } from "../theme/spacing";
 import config from "../constants/config";
+import apiClient from "../api/client";
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -345,6 +347,32 @@ function SectionHeader({ icon, iconColor, iconBg, title, subtitle }) {
 export default function HomeScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme(); // Use dynamic theme colors
+  const [stats, setStats] = useState({
+    users: "10K+",
+    downloads: "50K+",
+    papers: "1200+",
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const data = await apiClient.fetchStatsCached();
+        if (data) {
+          setStats({
+            users: data.totalUsers ? `${data.totalUsers}+` : "10K+",
+            downloads: data.totalDownloads ? `${data.totalDownloads}+` : "50K+",
+            papers: data.totalPapers ? `${data.totalPapers}+` : "1200+",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+    loadStats();
+  }, []);
   const greeting = getGreeting();
 
   const handleWebsitePress = () => {
@@ -358,31 +386,56 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      contentInsetAdjustmentBehavior="never"
     >
-      {/* Quick Stats Bar - Replaces Hero */}
-      <View style={[styles.statsBar, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
-        <View style={styles.statItem}>
-          <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-          <Text style={[styles.statNumber, { color: colors.textPrimary }]}>1000+</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Papers</Text>
+      {/* ─── Hero Section: Greeting + Dynamic Stats ─────────────────── */}
+      <View style={[styles.heroSection, { backgroundColor: colors.primary }]}>
+        <View style={styles.heroContent}>
+          <View style={styles.greetingArea}>
+            <View style={styles.greetingRow}>
+              <View>
+                <Text style={styles.greetingText}>{greeting},</Text>
+                <Text style={styles.studentName}>Fellow NITian 👋</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Menu", { screen: "Alerts" })}
+                style={styles.notifIconBtn}
+              >
+                <View style={styles.notifIconOuter}>
+                  <Ionicons name="notifications-outline" size={24} color="#FFF" />
+                  <View style={[styles.notifBadge, { backgroundColor: colors.accent }]} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Main Action Call */}
+          <View style={styles.heroStatsGrid}>
+            <View style={styles.heroStatItem}>
+              <Text style={styles.heroStatValue}>{stats.papers}</Text>
+              <Text style={styles.heroStatLabel}>Papers</Text>
+            </View>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatItem}>
+              <Text style={styles.heroStatValue}>{stats.users}</Text>
+              <Text style={styles.heroStatLabel}>Students</Text>
+            </View>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatItem}>
+              <Text style={styles.heroStatValue}>{stats.downloads}</Text>
+              <Text style={styles.heroStatLabel}>Downloads</Text>
+            </View>
+          </View>
         </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
-        <View style={styles.statItem}>
-          <Ionicons name="people-outline" size={20} color={colors.accent} />
-          <Text style={[styles.statNumber, { color: colors.textPrimary }]}>50K+</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Students</Text>
-        </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
-        <View style={styles.statItem}>
-          <Ionicons name="flash-outline" size={20} color={colors.featureGreen} />
-          <Text style={[styles.statNumber, { color: colors.textPrimary }]}>Fast</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Downloads</Text>
-        </View>
+
+        {/* Subtle background decoration */}
+        <View style={styles.heroDecoration} />
       </View>
 
-      {/* ─── Quick Actions Grid ───────────────────────────────── */}
-      <View style={styles.section}>
+      {/* ─── Quick Navigation ───────────────────────────────── */}
+      <View style={styles.navContainer}>
         <View style={styles.quickGrid}>
           {QUICK_ACTIONS.map((item) => (
             <QuickActionCard
@@ -394,29 +447,14 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ─── Stats ────────────────────────────────────────────── */}
-      <View style={styles.section}>
-        <View style={[styles.statsCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-          <View style={[styles.statsHeader, { borderBottomColor: colors.borderLight }]}>
-            <Ionicons name="pulse" size={18} color={colors.primary} />
-            <Text style={[styles.statsHeaderText, { color: colors.textPrimary }]}>At a Glance</Text>
-          </View>
-          <View style={styles.statsRow}>
-            {STATS.map((item, i) => (
-              <StatChip key={i} item={item} />
-            ))}
-          </View>
-        </View>
-      </View>
-
-      {/* ─── Features ─────────────────────────────────────────── */}
+      {/* ─── Key Features Showcase ─────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader
           icon="sparkles"
-          iconColor="#8B5CF6"
-          iconBg="rgba(139, 92, 246, 0.10)"
-          title="What You Can Do"
-          subtitle="Available right now"
+          iconColor={colors.primary}
+          iconBg={colors.primaryFaded}
+          title="Campus Toolkit"
+          subtitle="Essential tools for NIT KKR students"
         />
         <View style={[styles.featuresCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           {FEATURES.map((item, i) => (
@@ -429,14 +467,14 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ─── How to Use ───────────────────────────────────────── */}
+      {/* ─── Getting Started ───────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader
-          icon="map-outline"
-          iconColor="#3B82F6"
-          iconBg="rgba(59, 130, 246, 0.10)"
-          title="Get Started"
-          subtitle="4 simple steps"
+          icon="bulb-outline"
+          iconColor={colors.accent}
+          iconBg={colors.accentFaded}
+          title="Quick Guide"
+          subtitle="How to make the most of Hub"
         />
         <View style={[styles.stepsCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           {STEPS.map((item, i) => (
@@ -445,14 +483,14 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ─── Coming Soon ──────────────────────────────────────── */}
+      {/* ─── Roadmap ────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader
-          icon="rocket"
-          iconColor="#F59E0B"
-          iconBg="rgba(245, 158, 11, 0.10)"
-          title="Coming Soon"
-          subtitle="On the roadmap"
+          icon="rocket-outline"
+          iconColor={colors.secondary}
+          iconBg={colors.secondaryFaded}
+          title="The Roadmap"
+          subtitle="Features in active development"
         />
         <View style={styles.comingGrid}>
           {COMING_FEATURES.map((item, i) => (
@@ -461,31 +499,34 @@ export default function HomeScreen() {
         </View>
 
         {/* Suggestion CTA */}
-        <View style={styles.suggestCard}>
-          <View style={styles.suggestIconWrap}>
-            <Ionicons name="bulb" size={20} color="#F59E0B" />
+        <TouchableOpacity
+          style={[styles.suggestCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+          onPress={() => Linking.openURL("mailto:support@rustinet.com").catch(() => { })}
+        >
+          <View style={[styles.suggestIconWrap, { backgroundColor: colors.accentFaded }]}>
+            <Ionicons name="chatbubble-ellipses" size={20} color={colors.accent} />
           </View>
           <View style={styles.suggestText}>
-            <Text style={[styles.suggestTitle, { color: colors.textPrimary }]}>Have an idea?</Text>
+            <Text style={[styles.suggestTitle, { color: colors.textPrimary }]}>Feedback & Ideas</Text>
             <Text style={[styles.suggestDesc, { color: colors.textSecondary }]}>
-              We're building this for you. Share your suggestions!
+              Missing something? Let us know what to build next!
             </Text>
           </View>
           <Ionicons
-            name="chevron-forward"
+            name="arrow-forward"
             size={18}
             color={colors.textTertiary}
           />
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* ─── Footer ───────────────────────────────────────────── */}
       <View style={styles.footer}>
         <Text style={[styles.footerText, { color: colors.textTertiary }]}>
-          Made with ❤️ for NIT Kurukshetra students
+          Proudly built for NIT Kurukshetra
         </Text>
         <Text style={[styles.footerVersion, { color: colors.textTertiary }]}>
-          {config.APP_NAME} v{config.APP_VERSION}
+          Hub v{config.APP_VERSION} Stable
         </Text>
       </View>
     </ScrollView>
@@ -506,69 +547,113 @@ const CARD_SHADOW = {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor handled inline
   },
   contentContainer: {
-    paddingBottom: 140, // room for floating tab bar
+    paddingBottom: 140,
   },
 
-  // ─── Stats Bar (Replaces Hero) ─────────────────────────────
-  statsBar: {
+  // ─── Hero Section ──────────────────────────────────────────
+  heroSection: {
+    paddingTop: 60,
+    paddingBottom: 40,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: "hidden",
+  },
+  heroContent: {
+    zIndex: 2,
+  },
+  greetingArea: {
+    marginBottom: 28,
+  },
+  greetingText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.8)",
+    marginBottom: 4,
+  },
+  studentName: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
+  },
+  heroStatsGrid: {
     flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 20,
+    paddingVertical: 18,
+    alignItems: "center",
     justifyContent: "space-around",
-    alignItems: "center",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
-  statItem: {
+  heroStatItem: {
     alignItems: "center",
-    gap: spacing.xs,
+    flex: 1,
   },
-  statNumber: {
-    fontSize: 18,
+  heroStatValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginBottom: 2,
+  },
+  heroStatLabel: {
+    fontSize: 10,
     fontWeight: "700",
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: "500",
+    color: "rgba(255,255,255,0.7)",
     textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  statDivider: {
+  heroStatDivider: {
     width: 1,
-    height: 40,
+    height: 30,
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
-
-
-  // ─── Sections ──────────────────────────────────────────────
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 20,
+  heroDecoration: {
+    position: "absolute",
+    right: -50,
+    top: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  sectionHeader: {
+  greetingRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 14,
   },
-  sectionIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  notifIconBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    // color handled inline
-    letterSpacing: 0.1,
+  notifIconOuter: {
+    position: "relative",
   },
-  sectionSubtitle: {
-    fontSize: 12,
-    fontWeight: "500",
-    // color handled inline
-    marginTop: 1,
+  notifBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: "#FFF",
+  },
+
+  // ─── Nav Container ────────────────────────────────────────
+  navContainer: {
+    paddingHorizontal: 16,
+    marginTop: -20, // Overlap effect
+    zIndex: 10,
   },
 
   // ─── Quick Actions Grid ────────────────────────────────────
@@ -579,13 +664,12 @@ const styles = StyleSheet.create({
   },
   quickCard: {
     width: (SCREEN_WIDTH - 32 - 12) / 2,
-    // backgroundColor handled inline
     borderRadius: CARD_RADIUS,
     paddingVertical: 20,
     paddingHorizontal: 16,
     alignItems: "center",
-    // borderColor handled inline
     ...CARD_SHADOW,
+    borderWidth: 1,
   },
   quickIconWrap: {
     width: 52,
@@ -598,131 +682,89 @@ const styles = StyleSheet.create({
   quickLabel: {
     fontSize: 14,
     fontWeight: "700",
-    // color handled inline
     textAlign: "center",
   },
   quickSub: {
     fontSize: 11,
     fontWeight: "500",
-    // color handled inline
     marginTop: 3,
     textAlign: "center",
   },
 
-  // ─── Stats Card ────────────────────────────────────────────
-  statsCard: {
-    // backgroundColor handled inline
-    borderRadius: CARD_RADIUS,
-    padding: 16,
-    borderWidth: 1,
-    // borderColor handled inline
-    ...CARD_SHADOW,
+  // ─── Sections ──────────────────────────────────────────────
+  section: {
+    paddingHorizontal: 16,
+    marginTop: 28,
   },
-  statsHeader: {
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 14,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    // borderBottomColor handled inline
+    gap: 12,
+    marginBottom: 16,
+    paddingLeft: 4,
   },
-  statsHeaderText: {
-    fontSize: 14,
-    fontWeight: "700",
-    // color handled inline
-    letterSpacing: 0.2,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  statChip: {
-    flex: 1,
-    flexDirection: "column",
-    alignItems: "center",
-    // backgroundColor handled inline
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    borderWidth: 1,
-    // borderColor handled inline
-  },
-  statIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  sectionIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
   },
-  statTextWrap: {
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: 17,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: "800",
-    // color handled inline
+    letterSpacing: -0.2,
   },
-  statLabel: {
-    fontSize: 10.5,
-    fontWeight: "600",
-    // color handled inline
-    marginTop: 2,
-    textAlign: "center",
+  sectionSubtitle: {
+    fontSize: 12.5,
+    fontWeight: "500",
+    marginTop: 1,
   },
 
   // ─── Features Card ─────────────────────────────────────────
   featuresCard: {
-    // backgroundColor handled inline
     borderRadius: CARD_RADIUS,
     overflow: "hidden",
     borderWidth: 1,
-    // borderColor handled inline
     ...CARD_SHADOW,
   },
   featureRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
   },
   featureRowBorder: {
     borderBottomWidth: 1,
-    // borderBottomColor handled inline
   },
   featureIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
+    marginRight: 16,
   },
   featureText: {
     flex: 1,
   },
   featureTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    // color handled inline
     marginBottom: 2,
   },
   featureDesc: {
-    fontSize: 12.5,
-    fontWeight: "400",
-    // color handled inline
-    lineHeight: 17,
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
+    opacity: 0.8,
   },
 
   // ─── Steps Card ────────────────────────────────────────────
   stepsCard: {
-    // backgroundColor handled inline
     borderRadius: CARD_RADIUS,
-    padding: 16,
-    paddingTop: 18,
+    padding: 20,
     borderWidth: 1,
-    // borderColor handled inline
     ...CARD_SHADOW,
   },
   stepRow: {
@@ -731,7 +773,7 @@ const styles = StyleSheet.create({
   stepTimeline: {
     alignItems: "center",
     width: 32,
-    marginRight: 14,
+    marginRight: 16,
   },
   stepDot: {
     width: 28,
@@ -739,179 +781,124 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 2,
   },
   stepNum: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
-    // color handled inline
   },
   stepLine: {
     width: 2,
     flex: 1,
-    // backgroundColor handled inline
     marginVertical: 4,
   },
   stepContent: {
     flex: 1,
-    marginBottom: 18,
-    paddingTop: 2,
+    marginBottom: 24,
   },
   stepHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
+    gap: 8,
+    marginBottom: 6,
   },
   stepTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    // color handled inline
   },
   stepDesc: {
-    fontSize: 12.5,
-    fontWeight: "400",
-    // color handled inline
-    lineHeight: 17,
-    paddingLeft: 21,
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 19,
+    opacity: 0.7,
   },
 
-  // ─── Coming Soon Grid ─────────────────────────────────────
+  // ─── Coming Soon Grid ──────────────────────────────────────
   comingGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 14,
-  },
-  featureCard: {
-    width: (SCREEN_WIDTH - 32 - 24) / 3,
-    // backgroundColor handled inline
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 110,
+    gap: 12,
   },
   comingChip: {
-    width: (SCREEN_WIDTH - 32 - 20) / 3,
-    // backgroundColor handled inline
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.03)",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 8,
+    width: (SCREEN_WIDTH - 32 - 12) / 2,
   },
   comingIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
   },
   comingTitle: {
-    fontSize: 11.5,
+    fontSize: 13,
     fontWeight: "700",
-    // color handled inline
-    textAlign: "center",
-    marginBottom: 6,
+    flex: 1,
+    color: "#334155",
   },
   comingTag: {
-    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    borderRadius: 4,
   },
   comingTagText: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.3,
+    fontSize: 8,
+    fontWeight: "800",
     textTransform: "uppercase",
   },
 
   // ─── Suggest Card ──────────────────────────────────────────
   suggestCard: {
+    marginTop: 20,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(245, 158, 11, 0.06)",
-    borderRadius: 14,
-    padding: 14,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.15)",
-    gap: 12,
+    ...CARD_SHADOW,
   },
   suggestIconWrap: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 14,
   },
   suggestText: {
     flex: 1,
   },
   suggestTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
-    // color handled inline
+    marginBottom: 2,
   },
   suggestDesc: {
-    fontSize: 11.5,
-    fontWeight: "400",
-    // color handled inline
-    marginTop: 2,
-    lineHeight: 16,
-  },
-
-  // ─── About Card ────────────────────────────────────────────
-  aboutCard: {
-    // backgroundColor handled inline
-    borderRadius: CARD_RADIUS,
-    padding: 18,
-    borderWidth: 1,
-    // borderColor handled inline
-    ...CARD_SHADOW,
-  },
-  aboutText: {
-    fontSize: 13.5,
-    fontWeight: "400",
-    // color handled inline
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  websiteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    gap: 8,
-    alignSelf: "flex-start",
-    marginTop: 12,
-  },
-  websiteBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  // ─── Footer ────────────────────────────────────────────────
-  footer: {
-    alignItems: "center",
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    marginTop: 12,
-  },
-  footerText: {
     fontSize: 12,
     fontWeight: "500",
-    // color handled inline
-    textAlign: "center",
+    opacity: 0.7,
+  },
+
+  // ─── Footer ─────────────────────────────────────────────
+  footer: {
+    paddingVertical: 40,
+    alignItems: "center",
+    gap: 6,
+  },
+  footerText: {
+    fontSize: 13,
+    fontWeight: "600",
+    opacity: 0.8,
   },
   footerVersion: {
-    fontSize: 10.5,
-    fontWeight: "400",
-    // color handled inline
-    marginTop: 4,
-    opacity: 0.6,
+    fontSize: 11,
+    fontWeight: "500",
+    opacity: 0.5,
   },
 });

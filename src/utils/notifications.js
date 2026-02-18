@@ -232,6 +232,34 @@ async function notifyNewCollegeAlerts(count, firstTitle) {
   });
 }
 
+// ─── Notify about new job opportunities ─────────────────────
+
+/**
+ * Sends a local notification about new job/internship postings.
+ *
+ * @param {number} count - Number of new jobs found
+ * @param {string} [latestTitle] - Title of the most recent job
+ * @returns {Promise<string|null>}
+ */
+async function notifyNewJobs(count, latestTitle) {
+  if (!_isAvailable || !Notifications || count <= 0) {
+    return null;
+  }
+
+  const body =
+    count === 1
+      ? latestTitle || "1 new career opportunity found."
+      : `${count} new opportunities found. Latest: ${latestTitle || "Check them out now!"}`;
+
+  return scheduleLocalNotification({
+    title: "💼 New Job Openings!",
+    body,
+    data: { type: "new_jobs", count },
+    delaySeconds: 1,
+    channelId: "default", // Can be customized later if a special channel is needed
+  });
+}
+
 // ─── Notify download complete ───────────────────────────────
 
 /**
@@ -457,6 +485,7 @@ export {
   scheduleLocalNotification,
   notifyNewPapers,
   notifyNewCollegeAlerts,
+  notifyNewJobs,
   notifyDownloadComplete,
   notifyDownloadFailed,
   cancelNotification,
@@ -476,6 +505,7 @@ const notificationUtils = {
   scheduleLocalNotification,
   notifyNewPapers,
   notifyNewCollegeAlerts,
+  notifyNewJobs,
   notifyDownloadComplete,
   notifyDownloadFailed,
   cancelNotification,

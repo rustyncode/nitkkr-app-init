@@ -14,6 +14,7 @@ import { useTheme } from "../context/ThemeContext";
 import { initDB, getSubjects, addSubject, markAttendance, deleteSubject } from "../services/attendanceDB";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { predictAttendance, calculatePercentage, calculateOverallStats } from "../utils/attendanceUtils";
 
 const DISCLAIMER_SHOWN_KEY = "@attendance_disclaimer_shown";
 
@@ -27,79 +28,85 @@ try {
 function SubjectCard({ subject, onMark, onDelete }) {
     const { colors } = useTheme();
 
-    const percentage = subject.total_classes === 0
-        ? 100
-        : ((subject.attended_classes / subject.total_classes) * 100).toFixed(1);
+    const percentage = calculatePercentage(subject.attended_classes, subject.total_classes);
+    const prediction = predictAttendance(
+        subject.attended_classes,
+        subject.total_classes,
+        subject.required_percentage
+    );
 
     const isLow = parseFloat(percentage) < subject.required_percentage;
-
-    let statusText = "";
-    if (subject.total_classes > 0) {
-        if (parseFloat(percentage) > subject.required_percentage) {
-            const bunks = Math.floor((subject.attended_classes / (subject.required_percentage / 100)) - subject.total_classes);
-            if (bunks > 0) statusText = `You can bunk ${bunks} class(es)`;
-            else statusText = "On track";
-        } else {
-            const req = subject.required_percentage / 100;
-            const needed = Math.ceil((req * subject.total_classes - subject.attended_classes) / (1 - req));
-            if (needed > 0) statusText = `Attend next ${needed} class(es)`;
-            else statusText = "Low attendance";
-        }
-    } else {
-        statusText = "No classes yet";
-    }
+    const progress = subject.total_classes === 0 ? 0 : subject.attended_classes / subject.total_classes;
 
     return (
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-            <View style={styles.cardHeader}>
-                <View style={styles.titleRow}>
-                    <View style={[styles.colorDot, { backgroundColor: subject.color_code || colors.primary }]} />
-                    <Text style={[styles.subjectName, { color: colors.textPrimary }]}>{subject.name}</Text>
+        <View style={[styles.compactCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+            <View style={styles.cardTop}>
+                <View style={styles.subjectInfo}>
+                    <View style={[styles.colorIndicator, { backgroundColor: subject.color_code || colors.primary }]} />
+                    <View>
+                        <Text style={[styles.subjectNameCompact, { color: colors.textPrimary }]} numberOfLines={1}>
+                            {subject.name}
+                        </Text>
+                        <Text style={[styles.subjectMeta, { color: colors.textSecondary }]}>
+                            {subject.attended_classes}/{subject.total_classes} • {percentage}%
+                        </Text>
+                    </View>
                 </View>
-                <TouchableOpacity onPress={() => onDelete(subject.id)}>
-                    <Ionicons name="trash-outline" size={18} color={colors.textTertiary} />
-                </TouchableOpacity>
-            </View>
 
-            <View style={styles.statsRow}>
-                <View>
-                    <Text style={[styles.percent, { color: isLow ? colors.error : colors.success }]}>
-                        {percentage}%
-                    </Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        {subject.attended_classes}/{subject.total_classes} Present
-                    </Text>
-                </View>
-                <View style={styles.statusContainer}>
-                    <Text style={[styles.statusText, { color: colors.textSecondary }]}>{statusText}</Text>
+                <View style={styles.cardHeaderActions}>
+                    <TouchableOpacity onPress={() => onDelete(subject.id)} style={styles.deleteBtn}>
+                        <Ionicons name="trash-outline" size={16} color={colors.textTertiary} />
+                    </TouchableOpacity>
                 </View>
             </View>
 
-            <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+            <View style={styles.predictionRow}>
+                <View style={[
+                    styles.predictionBadge,
+                    { backgroundColor: (prediction.isSafe ? colors.success : colors.error) + "15" }
+                ]}>
+                    <Ionicons
+                        name={prediction.isSafe ? "checkmark-circle" : "warning"}
+                        size={12}
+                        color={prediction.isSafe ? colors.success : colors.error}
+                    />
+                    <Text style={[
+                        styles.predictionText,
+                        { color: prediction.isSafe ? colors.success : colors.error }
+                    ]} numberOfLines={1} ellipsizeMode="tail">
+                        {prediction.status}
+                    </Text>
+                </View>
+            </View>
 
-            <View style={styles.actions}>
+            {/* Compact Progress Bar */}
+            <View style={[styles.progressBarCompact, { backgroundColor: colors.borderLight }]}>
+                <View
+                    style={[
+                        styles.progressBarFill,
+                        {
+                            backgroundColor: isLow ? colors.error : colors.success,
+                            width: `${Math.min(100, progress * 100)}%`
+                        }
+                    ]}
+                />
+            </View>
+
+            <View style={styles.compactActions}>
                 <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: colors.success + "20" }]}
+                    style={[styles.miniActionBtn, { backgroundColor: colors.success + "15" }]}
                     onPress={() => onMark(subject.id, "PRESENT")}
                 >
-                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                    <Text style={[styles.actionText, { color: colors.success }]}>Present</Text>
+                    <Ionicons name="checkmark" size={16} color={colors.success} />
+                    <Text style={[styles.miniActionText, { color: colors.success }]}>Present</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: colors.error + "20" }]}
+                    style={[styles.miniActionBtn, { backgroundColor: colors.error + "15" }]}
                     onPress={() => onMark(subject.id, "ABSENT")}
                 >
-                    <Ionicons name="close-circle" size={20} color={colors.error} />
-                    <Text style={[styles.actionText, { color: colors.error }]}>Absent</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: colors.textTertiary + "20" }]}
-                    onPress={() => onMark(subject.id, "CANCELLED")}
-                >
-                    <Ionicons name="remove-circle" size={20} color={colors.textSecondary} />
-                    <Text style={[styles.actionText, { color: colors.textSecondary }]}>Off</Text>
+                    <Ionicons name="close" size={16} color={colors.error} />
+                    <Text style={[styles.miniActionText, { color: colors.error }]}>Absent</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -113,6 +120,7 @@ export default function AttendanceScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [newSubName, setNewSubName] = useState("");
     const [newSubCode, setNewSubCode] = useState("");
+    const [newSubRequired, setNewSubRequired] = useState("75");
 
     // Camera verification states
     const [disclaimerVisible, setDisclaimerVisible] = useState(false);
@@ -148,10 +156,12 @@ export default function AttendanceScreen() {
 
     const handleAdd = async () => {
         if (!newSubName) return;
-        await addSubject(newSubName, newSubCode);
+        const required = parseFloat(newSubRequired) || 75;
+        await addSubject(newSubName, newSubCode, "#3B82F6", required);
         setModalVisible(false);
         setNewSubName("");
         setNewSubCode("");
+        setNewSubRequired("75");
         setRefresh(prev => !prev);
     };
 
@@ -240,12 +250,36 @@ export default function AttendanceScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={[styles.header, { backgroundColor: colors.surface }]}>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Attendance Manager</Text>
-                <TouchableOpacity onPress={() => setModalVisible(true)}>
-                    <Ionicons name="add-circle" size={32} color={colors.primary} />
+            <View style={[styles.premiumHeader, { backgroundColor: colors.surface }]}>
+                <View>
+                    <Text style={[styles.premiumHeaderTitle, { color: colors.textPrimary }]}>Attendance</Text>
+                    <Text style={[styles.premiumHeaderSub, { color: colors.textSecondary }]}>Keep track of your classes</Text>
+                </View>
+                <TouchableOpacity
+                    style={[styles.addBtnContainer, { backgroundColor: colors.primary + "15" }]}
+                    onPress={() => setModalVisible(true)}
+                >
+                    <Ionicons name="add" size={24} color={colors.primary} />
                 </TouchableOpacity>
             </View>
+
+            {subjects.length > 0 && (
+                <View style={[styles.miniDashboard, { backgroundColor: colors.surface }]}>
+                    <View style={styles.dashboardStat}>
+                        <Text style={[styles.dashboardStatValue, { color: colors.primary }]}>
+                            {calculateOverallStats(subjects).percentage}%
+                        </Text>
+                        <Text style={[styles.dashboardStatLabel, { color: colors.textTertiary }]}>Overall</Text>
+                    </View>
+                    <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+                    <View style={styles.dashboardStat}>
+                        <Text style={[styles.dashboardStatValue, { color: colors.textPrimary }]}>
+                            {calculateOverallStats(subjects).attended}/{calculateOverallStats(subjects).total}
+                        </Text>
+                        <Text style={[styles.dashboardStatLabel, { color: colors.textTertiary }]}>Total</Text>
+                    </View>
+                </View>
+            )}
 
             <FlatList
                 data={subjects}
@@ -289,6 +323,14 @@ export default function AttendanceScreen() {
                             style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
                             value={newSubCode}
                             onChangeText={setNewSubCode}
+                        />
+                        <TextInput
+                            placeholder="Required Percentage (default 75%)"
+                            placeholderTextColor={colors.textTertiary}
+                            keyboardType="numeric"
+                            style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
+                            value={newSubRequired}
+                            onChangeText={setNewSubRequired}
                         />
 
                         <View style={styles.modalActions}>
@@ -348,28 +390,155 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        paddingTop: 60,
-        paddingBottom: 20,
+    premiumHeader: {
+        paddingTop: 20,
+        paddingBottom: 16,
         paddingHorizontal: 20,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        elevation: 2,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
     },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
+    premiumHeaderTitle: {
+        fontSize: 22,
+        fontWeight: '800',
+        letterSpacing: -0.5,
+    },
+    premiumHeaderSub: {
+        fontSize: 13,
+        fontWeight: '500',
+        marginTop: 2,
+    },
+    addBtnContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    miniDashboard: {
+        flexDirection: 'row',
+        paddingVertical: 12,
+        marginHorizontal: 20,
+        marginTop: 16,
+        borderRadius: 12,
+        elevation: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    dashboardStat: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    dashboardStatValue: {
+        fontSize: 18,
+        fontWeight: '800',
+    },
+    dashboardStatLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        marginTop: 2,
+    },
+    statDivider: {
+        width: 1,
+        height: '60%',
+        alignSelf: 'center',
     },
     list: {
         padding: 20,
         paddingBottom: 100,
     },
-    card: {
+    compactCard: {
         borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
+        padding: 14,
+        marginBottom: 12,
         borderWidth: 1,
+        elevation: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+    cardTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    subjectInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 10,
+    },
+    colorIndicator: {
+        width: 4,
+        height: 32,
+        borderRadius: 2,
+    },
+    subjectNameCompact: {
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    subjectMeta: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginTop: 1,
+    },
+    cardHeaderActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    predictionRow: {
+        flexDirection: 'row',
+        marginBottom: 10,
+    },
+    predictionBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
+        flexShrink: 1,
+    },
+    predictionText: {
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
+    deleteBtn: {
+        padding: 4,
+    },
+    progressBarCompact: {
+        height: 6,
+        borderRadius: 3,
+        marginBottom: 12,
+        width: '100%',
+        overflow: 'hidden',
+    },
+    compactActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 8,
+    },
+    miniActionBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 8,
+        borderRadius: 8,
+        gap: 4,
+    },
+    miniActionText: {
+        fontWeight: '700',
+        fontSize: 12,
     },
     cardHeader: {
         flexDirection: 'row',
@@ -405,6 +574,17 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
         marginTop: 2,
+    },
+    progressBarBg: {
+        height: 6,
+        borderRadius: 3,
+        marginTop: 12,
+        width: '100%',
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 3,
     },
     statusContainer: {
         alignItems: 'flex-end',

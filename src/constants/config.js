@@ -31,24 +31,27 @@ function getDevServerHost() {
 }
 
 const DEV_HOST = getDevServerHost();
+const LOCAL_IP = "10.0.2.2"; // Standard Android Emulator fallback
 const DEV_API = DEV_HOST
-  ? `http://${DEV_HOST}:5001/api`
-  : "http://10.0.2.2:5001/api"; // fallback for Android emulator
+  ? `http://${DEV_HOST}:5001/api/v1`
+  : `http://${LOCAL_IP}:5001/api/v1`;
+
+const PRODUCTION_API = "https://nitkkr-app.vercel.app/api/v1";
 
 const ENV = {
   development: {
     API_BASE_URL: DEV_API,
     API_BASE_URL_IOS: DEV_HOST
-      ? `http://${DEV_HOST}:5001/api`
-      : "http://localhost:5001/api",
+      ? `http://${DEV_HOST}:5001/api/v1`
+      : "http://localhost:5001/api/v1",
     API_BASE_URL_WEB: DEV_HOST
-      ? `http://${DEV_HOST}:5001/api`
-      : "http://localhost:5001/api",
+      ? `http://${DEV_HOST}:5001/api/v1`
+      : "http://localhost:5001/api/v1",
   },
   production: {
-    API_BASE_URL: "https://nitkkr-app.vercel.app/api",
-    API_BASE_URL_IOS: "https://nitkkr-app.vercel.app/api",
-    API_BASE_URL_WEB: "https://nitkkr-app.vercel.app/api",
+    API_BASE_URL: PRODUCTION_API,
+    API_BASE_URL_IOS: PRODUCTION_API,
+    API_BASE_URL_WEB: PRODUCTION_API,
   },
 };
 
@@ -89,7 +92,7 @@ const config = {
 
   // ─── App Info ──────────────────────────────────────────────
   APP_NAME: "RustiNet",
-  APP_TAGLINE: "Student Hub for NIT KKR",
+  APP_TAGLINE: "Student Hub",
   APP_DESCRIPTION: "Your one-stop app for PYQ papers, attendance tracking, and college updates",
   APP_VERSION: "1.0.0",
 
@@ -110,6 +113,7 @@ const config = {
   DEV_API_URL: DEV_API,
 };
 
-console.log("[Config] API Base URL:", config.API_BASE_URL);
+console.log(`[Config] DETECTED HOST: ${DEV_HOST || "Local (10.0.2.2)"}`);
+console.log(`[Config] ACTIVE API URL: ${config.API_BASE_URL}`);
 
 export default config;

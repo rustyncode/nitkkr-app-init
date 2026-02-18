@@ -4,12 +4,12 @@
 
 // Light Theme (Original)
 const lightColors = {
-  // Primary brand — rich indigo
-  primary: "#2C3E9B",
-  primaryLight: "#4A5BC7",
-  primaryDark: "#141D52",
-  primaryFaded: "rgba(44, 62, 155, 0.08)",
-  primarySoft: "rgba(44, 62, 155, 0.14)",
+  // Primary brand — Modern Blue
+  primary: "#2563EB",
+  primaryLight: "#3B82F6",
+  primaryDark: "#1E3A8A",
+  primaryFaded: "rgba(37, 99, 235, 0.08)",
+  primarySoft: "rgba(37, 99, 235, 0.14)",
 
   // Accent — warm amber/gold
   accent: "#F59E0B",

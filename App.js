@@ -8,24 +8,36 @@ LogBox.ignoreLogs([
 ]);
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, CommonActions } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
 import HomeScreen from "./src/screens/HomeScreen";
 import PYQScreen from "./src/screens/PYQScreen";
-import NotesScreen from "./src/screens/NotesScreen"; // Included but not used in Tab
+import NotesScreen from "./src/screens/NotesScreen";
 import AttendanceScreen from "./src/screens/AttendanceScreen";
 import NotificationsScreen from "./src/screens/NotificationsScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import JobsScreen from "./src/screens/JobsScreen";
+import BookmarksScreen from "./src/screens/BookmarksScreen";
+import MenuScreen from "./src/screens/MenuScreen";
+import AboutScreen from "./src/screens/AboutScreen";
 import Header from "./src/components/common/Header";
 import SplashScreen from "./src/screens/SplashScreen";
 
 import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
 import useNotificationTracker from "./src/hooks/useNotificationTracker";
+import * as ExpoSplashScreen from "expo-splash-screen";
+
+// Prevent native splash screen from auto-hiding
+ExpoSplashScreen.preventAutoHideAsync().catch(() => {
+  /* ignore error */
+});
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 const getTabConfig = (colors) => ({
   Home: {
@@ -46,24 +58,17 @@ const getTabConfig = (colors) => ({
     activeColor: colors.featureOrange,
     activeBg: colors.featureOrangeBg,
   },
-  // Replaced Notes with Attendance
   Attendance: {
     focused: "calendar",
     unfocused: "calendar-outline",
     activeColor: colors.featureTeal,
     activeBg: colors.featureTealBg,
   },
-  Alerts: {
-    focused: "notifications",
-    unfocused: "notifications-outline",
-    activeColor: colors.featureRed,
-    activeBg: colors.featureRedBg,
-  },
-  Settings: {
-    focused: "settings",
-    unfocused: "settings-outline",
-    activeColor: colors.primaryLight,
-    activeBg: colors.primaryFaded,
+  Menu: {
+    focused: "grid",
+    unfocused: "grid-outline",
+    activeColor: colors.primary,
+    activeBg: colors.primary + "15",
   },
 });
 
@@ -90,25 +95,44 @@ function TabIcon({ route, focused }) {
   );
 }
 
+// ─── Menu Stack ──────────────────────────────────────────────
+
+function MenuStack() {
+  const { colors } = useTheme();
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+        animation: "slide_from_right",
+      }}
+    >
+      <Stack.Screen name="MenuHome" component={MenuScreen} />
+      <Stack.Screen name="Bookmarks" component={BookmarksScreen} />
+      <Stack.Screen name="Notes" component={NotesScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Alerts" component={NotificationsScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
+    </Stack.Navigator>
+  );
+}
+
 function MainAppContent() {
   const { colors, isDark } = useTheme();
 
-  // Since Splash Screen handles the initial check, we disable autoCheck here
   const { status, newCount } = useNotificationTracker({
     autoCheck: false,
   });
 
   useEffect(() => {
     if (status === "new_found" && newCount > 0) {
-      console.log(
-        `[App] 🔔 ${newCount} new notification(s) detected — local notification fired.`,
-      );
+      console.log(`[App] 🔔 ${newCount} new notification(s) detected.`);
     }
   }, [status, newCount]);
 
   const TAB_CONFIG = getTabConfig(colors);
 
-  // Dynamic Navigation Theme
   const navigationTheme = {
     ...DefaultTheme,
     dark: isDark,
@@ -124,21 +148,20 @@ function MainAppContent() {
   };
 
   return (
-    <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
-      <StatusBar
-        style={isDark ? "light" : "dark"}
-        backgroundColor={colors.primary} // Keep primary for header continuity
-        translucent={false}
-      />
+    <NavigationContainer theme={navigationTheme}>
+      <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
+        <StatusBar
+          style={isDark ? "light" : "dark"}
+          backgroundColor={colors.primary}
+          translucent={true}
+        />
 
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.primary }]} edges={["top", "left", "right"]}>
-        <Header />
-
-        <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
-          <NavigationContainer theme={navigationTheme}>
+        <View style={styles.safeArea}>
+          <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
             <Tab.Navigator
               screenOptions={({ route }) => ({
-                headerShown: false,
+                headerShown: route.name !== "Home",
+                header: () => <Header />,
                 tabBarIcon: ({ focused }) => (
                   <TabIcon
                     route={route}
@@ -158,21 +181,35 @@ function MainAppContent() {
                 tabBarLabelStyle: styles.tabBarLabel,
                 tabBarItemStyle: styles.tabBarItem,
                 tabBarHideOnKeyboard: true,
-                animation: "shift",
               })}
             >
               <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: "Home" }} />
               <Tab.Screen name="PYQ" component={PYQScreen} options={{ tabBarLabel: "PYQ" }} />
               <Tab.Screen name="Jobs" component={JobsScreen} options={{ tabBarLabel: "Jobs" }} />
-              {/* Notes removed from tab, replaced with Attendance */}
               <Tab.Screen name="Attendance" component={AttendanceScreen} options={{ tabBarLabel: "Attendance" }} />
-              <Tab.Screen name="Alerts" component={NotificationsScreen} options={{ tabBarLabel: "Alerts" }} />
-              <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: "Settings" }} />
+              <Tab.Screen
+                name="Menu"
+                component={MenuStack}
+                options={{ tabBarLabel: "More" }}
+                listeners={({ navigation }) => ({
+                  tabPress: (e) => {
+                    // Prevent default action
+                    e.preventDefault();
+                    // Reset the stack to the first screen and jump to it
+                    navigation.dispatch(
+                      CommonActions.reset({
+                        index: 0,
+                        routes: [{ name: "Menu", state: { routes: [{ name: "MenuHome" }] } }],
+                      })
+                    );
+                  },
+                })}
+              />
             </Tab.Navigator>
-          </NavigationContainer>
+          </View>
         </View>
-      </SafeAreaView>
-    </View>
+      </View>
+    </NavigationContainer>
   );
 }
 
@@ -180,7 +217,12 @@ export default function App() {
   const [isAppReady, setIsAppReady] = useState(false);
 
   if (!isAppReady) {
-    return <SplashScreen onFinish={() => setIsAppReady(true)} />;
+    return (
+      <SplashScreen
+        onFinish={() => setIsAppReady(true)}
+        onReady={() => ExpoSplashScreen.hideAsync().catch(() => { })}
+      />
+    );
   }
 
   return (

@@ -37,6 +37,9 @@ const STATUS = {
 export default function useNotificationTracker({ autoCheck = true } = {}) {
   const [status, setStatus] = useState(STATUS.IDLE);
   const [newCount, setNewCount] = useState(0);
+  const [alertsCount, setAlertsCount] = useState(0);
+  const [jobsCount, setJobsCount] = useState(0);
+  const [papersCount, setPapersCount] = useState(0);
   const [newItems, setNewItems] = useState([]);
   const [lastCheck, setLastCheck] = useState(null);
   const [error, setError] = useState(null);
@@ -70,14 +73,23 @@ export default function useNotificationTracker({ autoCheck = true } = {}) {
       if (result.isFirstSync) {
         setStatus(STATUS.FIRST_SYNC);
         setNewCount(0);
+        setAlertsCount(0);
+        setJobsCount(0);
+        setPapersCount(0);
         setNewItems([]);
       } else if (result.hasNew) {
         setStatus(STATUS.NEW_FOUND);
         setNewCount(result.newCount);
+        setAlertsCount(result.alertsCount || 0);
+        setJobsCount(result.jobsCount || 0);
+        setPapersCount(result.papersCount || 0);
         setNewItems(result.newItems || []);
       } else {
         setStatus(STATUS.NO_CHANGE);
         setNewCount(0);
+        setAlertsCount(0);
+        setJobsCount(0);
+        setPapersCount(0);
         setNewItems([]);
       }
 
@@ -152,6 +164,9 @@ export default function useNotificationTracker({ autoCheck = true } = {}) {
     isChecking: status === STATUS.CHECKING,
     hasNew: status === STATUS.NEW_FOUND,
     newCount,
+    alertsCount,
+    jobsCount,
+    papersCount,
     newItems,
     lastCheck,
     error,

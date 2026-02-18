@@ -19,7 +19,7 @@ const PAGE_SIZE = 10;
 
 // ─── Hook ───────────────────────────────────────────────────
 
-export default function usePapers() {
+export default function usePapers(initialSearchQuery = "") {
   // ─── State ──────────────────────────────────────────────────
 
   // The full dataset (fetched once, cached locally)
@@ -36,7 +36,7 @@ export default function usePapers() {
     nextPage: null,
   });
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [filterOptions, setFilterOptions] = useState({
     departments: [],
@@ -76,6 +76,7 @@ export default function usePapers() {
   // ─── Preprocess records with search text ──────────────────
 
   const preprocessRecords = useCallback((records) => {
+    if (!records || !Array.isArray(records)) return [];
     return records.map((r) => {
       // Look up subject name from subject code mapping
       const subjectName = getSubjectName(r.subjectCode) || "";
@@ -160,7 +161,7 @@ export default function usePapers() {
         const { data, fromCache, isStale, cachedAt } =
           await fetchAllPapersCached({
             forceRefresh,
-            onFreshData: (freshData) => {
+            onFreshData: ({ data: freshData, hash: freshHash }) => {
               // Background refresh completed (stale-while-revalidate)
               const processed = preprocessRecords(freshData);
               setAllPapers(processed);
@@ -170,8 +171,6 @@ export default function usePapers() {
               setFilterOptions(options);
 
               // Re-run local query with current search/filters
-              // We can't access current state inside this callback reliably,
-              // so we store a flag and let the effect pick it up
               setSyncStatus((prev) => ({
                 ...prev,
                 fromCache: false,
@@ -372,6 +371,35 @@ export default function usePapers() {
 
     // Sync status (for UI indicators)
     syncStatus,
+
+    // Suggestions
+    suggestions: useMemo(() => {
+      if (!searchQuery || searchQuery.length < 2) return [];
+      const query = searchQuery.toLowerCase().trim();
+      const uniqueSubjects = new Map();
+
+      allPapers.forEach(p => {
+        if (!p.subjectCode) return;
+        const score =
+          (p.subjectCode.toLowerCase().includes(query) ? 2 : 0) +
+          (p.subjectName?.toLowerCase().includes(query) ? 1 : 0);
+
+        if (score > 0) {
+          const key = p.subjectCode;
+          if (!uniqueSubjects.has(key) || uniqueSubjects.get(key).score < score) {
+            uniqueSubjects.set(key, {
+              code: p.subjectCode,
+              name: p.subjectName || "Unknown Subject",
+              score
+            });
+          }
+        }
+      });
+
+      return Array.from(uniqueSubjects.values())
+        .sort((a, b) => b.score - a.score || a.code.localeCompare(b.code))
+        .slice(0, 5);
+    }, [allPapers, searchQuery])
   };
 }
 

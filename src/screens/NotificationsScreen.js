@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { spacing, typography } from "../theme/spacing";
+import LoadingOverlay from "../components/common/LoadingOverlay";
 import { fetchNotificationsCached } from "../api/client";
 import { notifyNewCollegeAlerts } from "../utils/notifications";
 import { useTheme } from "../context/ThemeContext";
@@ -22,6 +23,11 @@ const CATEGORY_CONFIG = {
     icon: "school-outline",
     color: "#C62828",
     bgColor: "#FFEBEE",
+  },
+  "Exam Date Sheets": {
+    icon: "document-text-outline",
+    color: "#D32F2F",
+    bgColor: "#FFCDD2",
   },
   Results: {
     icon: "trophy-outline",
@@ -73,6 +79,11 @@ const CATEGORY_CONFIG = {
     color: "#455A64",
     bgColor: "#ECEFF1",
   },
+  "Academic Calendar": {
+    icon: "calendar-number-outline",
+    color: "#1976D2",
+    bgColor: "#BBDEFB",
+  },
   Academic: {
     icon: "library-outline",
     color: "#0277BD",
@@ -102,18 +113,8 @@ function formatDate(dateStr) {
   try {
     const date = new Date(dateStr + "T00:00:00Z");
     const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
     const day = date.getUTCDate();
     const month = months[date.getUTCMonth()];
@@ -151,7 +152,7 @@ function getRelativeDate(dateStr) {
 // ─── Notification Card ──────────────────────────────────────
 
 function NotificationCard({ item }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const config = getCategoryConfig(item.category);
 
   const handlePress = () => {
@@ -163,73 +164,47 @@ function NotificationCard({ item }) {
   return (
     <TouchableOpacity
       style={[
-        styles.card,
+        styles.modernCard,
         {
           backgroundColor: colors.surface,
-          borderColor: colors.borderLight,
-          shadowColor: colors.shadow,
+          borderColor: isDark ? colors.border : colors.borderLight,
         },
       ]}
       onPress={handlePress}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
     >
-      <View style={styles.cardHeader}>
-        {/* Category Icon */}
-        <View
-          style={[styles.categoryIcon, { backgroundColor: config.bgColor }]}
-        >
+      <View style={styles.cardMain}>
+        <View style={[styles.iconContainer, { backgroundColor: config.bgColor + "50" }]}>
           <Ionicons name={config.icon} size={22} color={config.color} />
         </View>
 
-        {/* Content */}
-        <View style={styles.cardContent}>
-
-          {/* Category + Date Row */}
-          <View style={styles.metaRow}>
-            <View
-              style={[
-                styles.categoryBadge,
-                { backgroundColor: config.bgColor },
-              ]}
-            >
-              <Text style={[styles.categoryText, { color: config.color }]}>
-                {item.category || "General"}
-              </Text>
-            </View>
-            <Text style={styles.dateText}>{getRelativeDate(item.date)}</Text>
+        <View style={styles.cardDetails}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.categoryLabel, { color: config.color }]}>
+              {item.category?.toUpperCase() || "GENERAL"}
+            </Text>
+            <Text style={[styles.timeText, { color: colors.textTertiary }]}>
+              {getRelativeDate(item.date)}
+            </Text>
           </View>
 
-          {/* Title */}
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={3}>
+          <Text style={[styles.contentTitle, { color: colors.textPrimary }]} numberOfLines={2}>
             {item.title}
           </Text>
 
-          {/* Bottom Row */}
-          <View style={styles.cardBottomRow}>
-            <View style={styles.sourceBadge}>
-              <Ionicons
-                name={
-                  item.source === "announcements"
-                    ? "megaphone-outline"
-                    : "notifications-outline"
-                }
-                size={12}
-                color={colors.textTertiary}
-              />
-              <Text style={styles.sourceText}>
-                {item.source === "announcements"
-                  ? "Announcement"
-                  : "Notification"}
+          <View style={styles.cardFooterRow}>
+            <View style={styles.tagWrapper}>
+              <Ionicons name="megaphone-outline" size={12} color={colors.textTertiary} />
+              <Text style={[styles.tagText, { color: colors.textSecondary }]}>
+                {item.source === "announcements" ? "Official Announcement" : "College Alert"}
               </Text>
             </View>
             {item.link && (
-              <View style={styles.linkIndicator}>
-                <Ionicons
-                  name="open-outline"
-                  size={14}
-                  color={colors.primary}
-                />
-                <Text style={styles.linkText}>Open</Text>
+              <View style={[styles.openBtn, { backgroundColor: colors.primary + "10" }]}>
+                <Text style={[styles.openBtnText, { color: colors.primary }]}>
+                  {item.link.toLowerCase().endsWith(".pdf") ? "View PDF" : "Open Link"}
+                </Text>
+                <Ionicons name="chevron-forward" size={12} color={colors.primary} />
               </View>
             )}
           </View>
@@ -253,12 +228,7 @@ function CategoryChip({ label, isActive, onPress, count }) {
       </Text>
       {count !== undefined && count > 0 && (
         <View style={[styles.chipCount, isActive && styles.chipCountActive]}>
-          <Text
-            style={[
-              styles.chipCountText,
-              isActive && styles.chipCountTextActive,
-            ]}
-          >
+          <Text style={[styles.chipCountText, isActive && styles.chipCountTextActive]}>
             {count}
           </Text>
         </View>
@@ -274,51 +244,16 @@ function EmptyNotifications({ onRetry }) {
   return (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconCircle}>
-        <Ionicons
-          name="notifications-off-outline"
-          size={48}
-          color={colors.primaryLight}
-        />
+        <Ionicons name="notifications-off-outline" size={48} color={colors.primaryLight} />
       </View>
-      <Text style={styles.emptyTitle}>No Notifications</Text>
-      <Text style={styles.emptyMessage}>
+      <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Notifications</Text>
+      <Text style={[styles.emptyMessage, { color: colors.textSecondary }]}>
         There are no recent notifications from NIT Kurukshetra at the moment.
       </Text>
       {onRetry && (
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={onRetry}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="refresh-outline" size={18} color={colors.white} />
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-// ─── Error State ────────────────────────────────────────────
-
-function ErrorState({ error, onRetry }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.emptyContainer}>
-      <View style={styles.emptyIconCircle}>
-        <Ionicons name="cloud-offline-outline" size={48} color={colors.error} />
-      </View>
-      <Text style={styles.emptyTitle}>Something went wrong</Text>
-      <Text style={styles.emptyMessage}>
-        {error || "Could not load notifications. Please check your connection."}
-      </Text>
-      {onRetry && (
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={onRetry}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="refresh-outline" size={18} color={colors.white} />
-          <Text style={styles.retryButtonText}>Retry</Text>
+        <TouchableOpacity style={[styles.retryButton, { backgroundColor: colors.primary }]} onPress={onRetry} activeOpacity={0.7}>
+          <Ionicons name="refresh-outline" size={18} color="#FFF" />
+          <Text style={[styles.retryButtonText, { color: "#FFF" }]}>Retry</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -333,34 +268,12 @@ function LoadingSkeleton() {
       {[1, 2, 3, 4, 5].map((i) => (
         <View key={i} style={styles.skeletonCard}>
           <View style={styles.skeletonRow}>
-            <View
-              style={[
-                styles.skeletonBlock,
-                { width: 44, height: 44, borderRadius: 22 },
-              ]}
-            />
+            <View style={[styles.skeletonBlock, { width: 44, height: 44, borderRadius: 22 }]} />
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <View
-                style={[
-                  styles.skeletonBlock,
-                  { width: 80, height: 18, borderRadius: 10, marginBottom: 8 },
-                ]}
-              />
-              <View
-                style={[
-                  styles.skeletonBlock,
-                  { width: "100%", height: 14, marginBottom: 6 },
-                ]}
-              />
-              <View
-                style={[
-                  styles.skeletonBlock,
-                  { width: "75%", height: 14, marginBottom: 8 },
-                ]}
-              />
-              <View
-                style={[styles.skeletonBlock, { width: 100, height: 12 }]}
-              />
+              <View style={[styles.skeletonBlock, { width: 80, height: 18, borderRadius: 10, marginBottom: 8 }]} />
+              <View style={[styles.skeletonBlock, { width: "100%", height: 14, marginBottom: 6 }]} />
+              <View style={[styles.skeletonBlock, { width: "75%", height: 14, marginBottom: 8 }]} />
+              <View style={[styles.skeletonBlock, { width: 100, height: 12 }]} />
             </View>
           </View>
         </View>
@@ -372,7 +285,7 @@ function LoadingSkeleton() {
 // ─── Main Screen ────────────────────────────────────────────
 
 export default function NotificationsScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [notifications, setNotifications] = useState([]);
   const [filteredNotifications, setFilteredNotifications] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -383,103 +296,74 @@ export default function NotificationsScreen() {
   const [lastFetched, setLastFetched] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Track previously seen notification titles to detect new ones
   const previousTitlesRef = useRef(new Set());
   const isFirstLoadRef = useRef(true);
 
-  // ─── Fetch notifications ───────────────────────────────────
+  const applyFilter = useCallback((data, category) => {
+    if (!data) return;
+    if (category === "All") {
+      setFilteredNotifications(data);
+    } else if (category === "Others") {
+      setFilteredNotifications(
+        data.filter((item) => item.category !== "Academic" && item.category !== "Examination")
+      );
+    } else {
+      setFilteredNotifications(
+        data.filter((item) => item.category === category)
+      );
+    }
+  }, []);
 
   const loadNotifications = useCallback(
     async (isRefresh = false) => {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
       setError(null);
 
       try {
-        const {
-          data: result,
-          fromCache,
-          isStale,
-        } = await fetchNotificationsCached(
-          { days: 30 },
-          {
-            forceRefresh: isRefresh,
-            onFreshData: (freshResult) => {
-              // Background refresh completed — check for new alerts
-              const freshItems = freshResult.data || [];
+        const { data, fromCache, isStale, lastFetched: fetchedAt } = await fetchNotificationsCached({
+          forceRefresh: isRefresh,
+        });
 
-              // Detect new notifications from background refresh
-              const prevTitles = previousTitlesRef.current;
-              const newItems = freshItems.filter(
-                (item) => item.title && !prevTitles.has(item.title),
-              );
-              if (newItems.length > 0) {
-                notifyNewCollegeAlerts(newItems.length, newItems[0].title);
-              }
+        const freshItems = data || [];
+        setNotifications(freshItems);
+        setTotalCount(freshItems.length);
+        if (fetchedAt) setLastFetched(new Date(fetchedAt).toISOString());
 
-              // Update known titles
-              previousTitlesRef.current = new Set(
-                freshItems.filter((i) => i.title).map((i) => i.title),
-              );
-
-              setNotifications(freshItems);
-              setTotalCount(freshResult.total || freshItems.length);
-              setLastFetched(freshResult.lastFetched || null);
-            },
-          },
-        );
-        const items = result.data || [];
-
-        // Detect new notifications compared to what we had before
-        if (!isFirstLoadRef.current && items.length > 0) {
-          const prevTitles = previousTitlesRef.current;
-          const newItems = items.filter(
-            (item) => item.title && !prevTitles.has(item.title),
-          );
-          if (newItems.length > 0) {
-            // Fire a local notification about new college alerts
-            notifyNewCollegeAlerts(newItems.length, newItems[0].title);
-          }
-        }
-
-        // Update the set of known titles
-        previousTitlesRef.current = new Set(
-          items.filter((i) => i.title).map((i) => i.title),
-        );
-        isFirstLoadRef.current = false;
-
-        setNotifications(items);
-        setTotalCount(result.total || items.length);
-        setLastFetched(result.lastFetched || null);
-
-        // Extract categories efficiently
-        const categoryCounts = items.reduce((acc, item) => {
+        // Process categories
+        const counts = freshItems.reduce((acc, item) => {
           const cat = item.category || "General";
           acc[cat] = (acc[cat] || 0) + 1;
           return acc;
         }, {});
 
-        const finalCats = Object.entries(categoryCounts)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => b.count - a.count);
+        const othersCount = freshItems.filter(
+          (item) => item.category !== "Academic" && item.category !== "Examination"
+        ).length;
+
+        const finalCats = Object.keys(counts)
+          .filter((c) => c !== "Academic" && c !== "Examination")
+          .map((c) => ({ name: c, count: counts[c] }))
+          .concat(othersCount > 0 ? [{ name: "Others", count: othersCount }] : [])
+          .sort((a, b) => {
+            if (a.name === "Examination") return -1;
+            if (b.name === "Examination") return 1;
+            return b.count - a.count;
+          });
 
         setCategories(finalCats);
+        applyFilter(freshItems, selectedCategory);
 
-        // Apply current filter
-        if (selectedCategory === "All") {
-          setFilteredNotifications(items);
-        } else if (selectedCategory === "Others") {
-          setFilteredNotifications(
-            items.filter((item) => item.category !== "Academic" && item.category !== "Examination"),
-          );
-        } else {
-          setFilteredNotifications(
-            items.filter((item) => item.category === selectedCategory),
-          );
+        if (!isFirstLoadRef.current && freshItems.length > 0 && !fromCache) {
+          const prevTitles = previousTitlesRef.current;
+          const newItems = freshItems.filter(i => i.title && !prevTitles.has(i.title));
+          if (newItems.length > 0) {
+            notifyNewCollegeAlerts(newItems.length, newItems[0].title);
+          }
         }
+
+        previousTitlesRef.current = new Set(freshItems.filter(i => i.title).map(i => i.title));
+        isFirstLoadRef.current = false;
       } catch (err) {
         console.error("[NotificationsScreen] Error:", err.message);
         setError(err.message || "Failed to load notifications");
@@ -488,172 +372,102 @@ export default function NotificationsScreen() {
         setRefreshing(false);
       }
     },
-    [selectedCategory],
+    [selectedCategory, applyFilter]
   );
-
-  // ─── Initial load ──────────────────────────────────────────
 
   useEffect(() => {
     loadNotifications();
-  }, []);
-
-  // ─── Apply category filter when selection changes ──────────
+  }, [loadNotifications]);
 
   useEffect(() => {
-    if (selectedCategory === "All") {
-      setFilteredNotifications(notifications);
-    } else if (selectedCategory === "Others") {
-      setFilteredNotifications(
-        notifications.filter((item) => item.category !== "Academic" && item.category !== "Examination"),
-      );
-    } else {
-      setFilteredNotifications(
-        notifications.filter((item) => item.category === selectedCategory),
-      );
-    }
-  }, [selectedCategory, notifications]);
-
-  // ─── Handle category press ─────────────────────────────────
+    applyFilter(notifications, selectedCategory);
+  }, [selectedCategory, notifications, applyFilter]);
 
   const handleCategoryPress = useCallback((category) => {
     setSelectedCategory((prev) => (prev === category ? "All" : category));
   }, []);
 
-  // ─── Handle refresh ────────────────────────────────────────
-
   const handleRefresh = useCallback(() => {
     loadNotifications(true);
   }, [loadNotifications]);
 
-  // ─── Render item ───────────────────────────────────────────
-
-  const renderItem = useCallback(
-    ({ item }) => <NotificationCard item={item} />,
-    [],
-  );
-
-  const keyExtractor = useCallback(
-    (item, index) => item.id || `notif-${index}`,
-    [],
-  );
-
-  // ─── List Header ───────────────────────────────────────────
-
-  const ListHeader = useCallback(() => {
-    return (
-      <View>
-        {/* Info Bar */}
-        <View style={[styles.infoBar, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-          <View style={styles.infoLeft}>
-            <Ionicons
-              name="globe-outline"
-              size={16}
-              color={colors.textSecondary}
-            />
-            <Text style={styles.infoText}>
-              Latest from nitkkr.ac.in (30 days)
+  const ListHeader = useCallback(() => (
+    <View style={[styles.infoBar, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+      <View style={styles.infoLeft}>
+        <Ionicons name="time-outline" size={16} color={colors.primary} />
+        <View>
+          <Text style={[styles.infoText, { color: colors.textPrimary }]}>Past 30 Days</Text>
+          {lastFetched && (
+            <Text style={[styles.lastSyncedText, { color: colors.textTertiary }]}>
+              Synced: {new Date(lastFetched).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
-          </View>
-          <Text style={styles.countText}>
-            {filteredNotifications.length} item
-            {filteredNotifications.length !== 1 ? "s" : ""}
-          </Text>
+          )}
         </View>
-
-        {/* Category Chips */}
-        {categories.length > 0 && (
-          <View style={styles.chipsContainer}>
-            <FlatList
-              data={[{ name: "All", count: totalCount }, ...categories]}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.name}
-              contentContainerStyle={styles.chipsContent}
-              renderItem={({ item }) => (
-                <CategoryChip
-                  label={item.name}
-                  count={item.count}
-                  isActive={selectedCategory === item.name}
-                  onPress={() => handleCategoryPress(item.name)}
-                />
-              )}
-            />
-          </View>
-        )}
       </View>
-    );
-  }, [
-    categories,
-    selectedCategory,
-    handleCategoryPress,
-    filteredNotifications.length,
-    totalCount,
-  ]);
-
-  // ─── Loading state ─────────────────────────────────────────
-
-  if (loading && notifications.length === 0) {
-    return (
-      <View style={styles.container}>
-        <LoadingSkeleton />
+      <View style={styles.infoRight}>
+        <Text style={[styles.countText, { color: colors.primary }]}>{filteredNotifications.length}</Text>
+        <Text style={[styles.countLabel, { color: colors.textSecondary }]}> alerts</Text>
       </View>
-    );
-  }
-
-  // ─── Error state ───────────────────────────────────────────
-
-  if (error && notifications.length === 0) {
-    return (
-      <View style={styles.container}>
-        <ErrorState error={error} onRetry={() => loadNotifications(false)} />
-      </View>
-    );
-  }
-
-  // ─── Main List ─────────────────────────────────────────────
+    </View>
+  ), [colors, lastFetched, filteredNotifications.length]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FlatList
-        data={filteredNotifications}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={[
-          styles.listContent,
-          filteredNotifications.length === 0 && styles.emptyListContent,
-        ]}
-        ListHeaderComponent={<ListHeader />}
-        ListEmptyComponent={
-          <EmptyNotifications onRetry={() => loadNotifications(false)} />
-        }
-        ItemSeparatorComponent={() => <View style={{ height: 2 }} />}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            colors={[colors.primary, colors.accent]}
-            tintColor={colors.primary}
-            progressBackgroundColor={colors.surface}
-            title="Refreshing notifications..."
-            titleColor={colors.textSecondary}
+      {categories.length > 0 && (
+        <View style={styles.chipsContainer}>
+          <FlatList
+            data={[{ name: "All", count: totalCount }, ...categories]}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.name}
+            contentContainerStyle={styles.chipsContent}
+            renderItem={({ item }) => (
+              <CategoryChip
+                label={item.name}
+                count={item.count}
+                isActive={selectedCategory === item.name}
+                onPress={() => handleCategoryPress(item.name)}
+              />
+            )}
           />
-        }
-        showsVerticalScrollIndicator={true}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={7}
-        initialNumToRender={8}
-      />
+        </View>
+      )}
+
+      {loading && notifications.length === 0 ? (
+        <LoadingSkeleton />
+      ) : (
+        <FlatList
+          data={filteredNotifications}
+          renderItem={({ item }) => <NotificationCard item={item} />}
+          keyExtractor={(item, index) => item.id || `notif-${index}`}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredNotifications.length === 0 && styles.emptyListContent,
+          ]}
+          ListHeaderComponent={<ListHeader />}
+          ListEmptyComponent={
+            <EmptyNotifications onRetry={() => loadNotifications(false)} />
+          }
+          ItemSeparatorComponent={() => <View style={{ height: 2 }} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[colors.primary, colors.accent]}
+              tintColor={colors.primary}
+              progressBackgroundColor={colors.surface}
+            />
+          }
+        />
+      )}
+      <LoadingOverlay visible={loading && !refreshing && notifications.length > 0} message="Checking for updates..." />
     </View>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor handled by theme hook
   },
   listContent: {
     paddingBottom: spacing.massive + 80,
@@ -661,250 +475,218 @@ const styles = StyleSheet.create({
   emptyListContent: {
     flexGrow: 1,
   },
-
-  // ─── Info Bar ──────────────────────────────────────────────
+  modernCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: spacing.md,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  cardMain: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardDetails: {
+    flex: 1,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  categoryLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  timeText: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  contentTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  cardFooterRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  tagWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  openBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    gap: 2,
+  },
+  openBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
   infoBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.screenHorizontal,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
-    // backgroundColor handled inline
     borderBottomWidth: 1,
-    // borderBottomColor handled inline
+    borderBottomColor: "rgba(0,0,0,0.05)",
   },
   infoLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 12,
   },
   infoText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    // color handled inline
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  lastSyncedText: {
+    fontSize: 10,
+    fontWeight: "500",
+    marginTop: 1,
+  },
+  infoRight: {
+    flexDirection: "row",
+    alignItems: "baseline",
   },
   countText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
-    // color handled inline
+    fontSize: 16,
+    fontWeight: "800",
   },
-
-  // ─── Category Chips ────────────────────────────────────────
+  countLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
   chipsContainer: {
-    // backgroundColor handled inline
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    // borderBottomColor handled inline
-    paddingVertical: spacing.sm,
+    borderBottomColor: "rgba(0,0,0,0.05)",
   },
   chipsContent: {
-    paddingHorizontal: spacing.screenHorizontal,
-    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    gap: 10,
   },
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    // backgroundColor handled inline
-    paddingVertical: spacing.sm - 2,
-    paddingHorizontal: spacing.md,
-    borderRadius: spacing.chipRadius,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     borderWidth: 1.5,
-    // borderColor handled inline
-    gap: spacing.xs,
+    backgroundColor: "transparent",
+    borderColor: "rgba(0,0,0,0.05)",
+    gap: 6,
   },
   chipActive: {
-    // backgroundColor handled inline
-    // borderColor handled inline
+    backgroundColor: "rgba(0,0,0,0.03)",
   },
   chipText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    // color handled inline
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#666",
   },
   chipTextActive: {
-    // color handled inline
-    fontWeight: typography.fontWeight.semibold,
+    color: "#000",
+    fontWeight: "700",
   },
   chipCount: {
-    // backgroundColor handled inline
-    borderRadius: 8,
-    minWidth: 20,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
+    backgroundColor: "rgba(0,0,0,0.05)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   chipCountActive: {
-    // backgroundColor handled inline
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   chipCountText: {
     fontSize: 10,
-    fontWeight: typography.fontWeight.bold,
-    // color handled inline
+    fontWeight: "700",
   },
-  chipCountTextActive: {
-    // color handled inline
-  },
-
-  // ─── Card ──────────────────────────────────────────────────
-  card: {
-    marginHorizontal: spacing.screenHorizontal,
-    marginTop: spacing.sm,
-    // backgroundColor handled inline
-    borderRadius: spacing.cardRadius,
-    padding: spacing.lg,
-    borderWidth: 1,
-    // borderColor handled inline
-    elevation: 1,
-    // shadowColor handled inline
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.6,
-    shadowRadius: 2,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  categoryIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
-    marginTop: 2,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  categoryBadge: {
-    paddingVertical: 2,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 6,
-  },
-  categoryText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.semibold,
-    letterSpacing: typography.letterSpacing.wide,
-  },
-  dateText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.medium,
-    // color handled inline
-  },
-  cardTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    // color handled inline
-    lineHeight: typography.fontSize.md * typography.lineHeight.normal,
-    marginBottom: spacing.sm,
-  },
-  cardBottomRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sourceBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  sourceText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.regular,
-    // color handled inline
-  },
-  linkIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xxs,
-  },
-  linkText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.semibold,
-    // color handled inline
-  },
-
-  // ─── Empty / Error ─────────────────────────────────────────
   emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xxxl,
-    paddingVertical: spacing.giant,
-    minHeight: 350,
+    paddingVertical: 50,
   },
   emptyIconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    // backgroundColor handled inline
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.xxl,
-    borderWidth: 2,
-    // borderColor handled inline
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
   },
   emptyTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    // color handled inline
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 8,
     textAlign: "center",
-    marginBottom: spacing.sm,
   },
   emptyMessage: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.regular,
-    // color handled inline
+    fontSize: 14,
+    fontWeight: "500",
     textAlign: "center",
-    lineHeight: typography.fontSize.md * typography.lineHeight.relaxed,
-    marginBottom: spacing.xxl,
-    maxWidth: 280,
+    lineHeight: 20,
+    maxWidth: 250,
+    marginBottom: 24,
   },
   retryButton: {
     flexDirection: "row",
     alignItems: "center",
-    // backgroundColor handled inline
-    paddingVertical: spacing.buttonPaddingV,
-    paddingHorizontal: spacing.buttonPaddingH,
-    borderRadius: spacing.buttonRadius,
-    gap: spacing.sm,
-    elevation: 3,
-    // shadowColor handled inline
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
   },
   retryButtonText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    // color handled inline
+    fontSize: 14,
+    fontWeight: "700",
   },
-
-  // ─── Skeleton ──────────────────────────────────────────────
   skeletonContainer: {
-    padding: spacing.screenHorizontal,
-    paddingTop: spacing.lg,
+    padding: spacing.md,
   },
   skeletonCard: {
-    // backgroundColor handled inline
-    borderRadius: spacing.cardRadius,
-    padding: spacing.lg,
+    borderRadius: 16,
+    padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    // borderColor handled inline
+    borderColor: "rgba(0,0,0,0.05)",
   },
   skeletonRow: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
   skeletonBlock: {
-    // backgroundColor handled inline
+    backgroundColor: "rgba(0,0,0,0.05)",
     borderRadius: 4,
   },
 });

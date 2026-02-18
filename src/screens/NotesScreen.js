@@ -12,21 +12,21 @@ export default function NotesScreen() {
       icon: "document-text-outline",
       title: "Subject-wise Notes",
       description: "Organized by department, semester, and subject code.",
-    // color handled inline
+      // color handled inline
       bgColor: colors.featureBlueBg,
     },
     {
       icon: "pencil-outline",
       title: "Handwritten Notes",
       description: "Top-quality handwritten notes from toppers and seniors.",
-    // color handled inline
+      // color handled inline
       bgColor: colors.featurePurpleBg,
     },
     {
       icon: "flash-outline",
       title: "Quick Revision",
       description: "Condensed revision materials for last-minute prep.",
-    // color handled inline
+      // color handled inline
       bgColor: colors.featureOrangeBg,
     },
     {
@@ -34,7 +34,7 @@ export default function NotesScreen() {
       title: "Offline Access",
       description:
         "Download notes to study anytime, anywhere — no internet needed.",
-    // color handled inline
+      // color handled inline
       bgColor: colors.featureGreenBg,
     },
     {
@@ -42,14 +42,14 @@ export default function NotesScreen() {
       title: "Share with Friends",
       description:
         "Easily share notes with classmates via WhatsApp, Telegram, etc.",
-    // color handled inline
+      // color handled inline
       bgColor: colors.featureTealBg,
     },
     {
       icon: "star-outline",
       title: "Bookmark Favorites",
       description: "Save your most-used notes for quick access later.",
-    // color handled inline
+      // color handled inline
       bgColor: colors.featureRedBg,
     },
   ], [colors]);
@@ -61,69 +61,49 @@ export default function NotesScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Hero */}
-      <View style={styles.heroSection}>
-        <View style={[styles.iconCircle, { backgroundColor: colors.primarySoft, borderColor: colors.borderLight }]}>
-          <Ionicons name="book-outline" size={52} color={colors.primaryLight} />
+      <View style={styles.premiumHero}>
+        <View style={[styles.mainIconCircle, { backgroundColor: colors.primary + "10", borderColor: colors.primary + "20" }]}>
+          <Ionicons name="journal" size={48} color={colors.primary} />
         </View>
 
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Notes</Text>
+        <Text style={[styles.premiumTitle, { color: colors.textPrimary }]}>Notes & Resources</Text>
 
-        <View style={[
-          styles.comingSoonBadge,
-          {
-    // backgroundColor handled inline
-    // borderColor handled inline
-          }
-        ]}>
-          <Ionicons name="rocket-outline" size={15} color={colors.secondary} />
-          <Text style={[styles.comingSoonText, { color: colors.secondaryDark }]}>Coming Soon</Text>
+        <View style={[styles.modernBadge, { backgroundColor: colors.secondary + "15" }]}>
+          <Ionicons name="time" size={14} color={colors.secondary} />
+          <Text style={[styles.modernBadgeText, { color: colors.secondary }]}>In Development</Text>
         </View>
 
-        <Text style={[styles.description, { color: colors.textSecondary }]}>
-          We're building a comprehensive notes library for every department and
-          subject at NIT Kurukshetra.
+        <Text style={[styles.premiumDescription, { color: colors.textSecondary }]}>
+          We're curating the best notes and academic resources for every subject at NIT Kurukshetra.
         </Text>
-      </View>
-
-      {/* What to Expect */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <View
-            style={[
-              styles.sectionIconCircle,
-              { backgroundColor: colors.secondaryFaded },
-            ]}
-          >
-            <Ionicons
-              name="sparkles-outline"
-              size={18}
-              color={colors.secondary}
-            />
-          </View>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>What to Expect</Text>
-        </View>
-
-        {PLANNED_ITEMS.map((item, index) => (
-          <PlannedItem key={index} {...item} colors={colors} />
-        ))}
       </View>
 
       {/* Contribute CTA */}
       <View style={styles.section}>
-        <View style={[
-          styles.contributeCard,
-          {
-    // backgroundColor handled inline
-    // borderColor handled inline
-    // shadowColor handled inline
-          }
-        ]}>
-          <Ionicons name="heart-outline" size={28} color={colors.error} />
-          <Text style={[styles.contributeTitle, { color: colors.textPrimary }]}>Want to Contribute?</Text>
+        <View style={[styles.premiumContributeCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <View style={[styles.contributeIcon, { backgroundColor: colors.error + "10" }]}>
+            <Ionicons name="heart" size={24} color={colors.error} />
+          </View>
+          <Text style={[styles.contributeTitle, { color: colors.textPrimary }]}>Want to help?</Text>
           <Text style={[styles.contributeText, { color: colors.textSecondary }]}>
-            Have notes you'd like to share with fellow NITians? We'd love your
-            help building this section. Stay tuned for the upload feature!
+            Share your notes with fellow NITians and help us build the ultimate student library.
           </Text>
+        </View>
+      </View>
+
+      {/* What to Expect (Moved to bottom) */}
+      <View style={[styles.section, { marginTop: spacing.xxl }]}>
+        <View style={styles.sectionHeaderRow}>
+          <View style={[styles.sectionIconCircle, { backgroundColor: colors.primary + "10" }]}>
+            <Ionicons name="sparkles" size={16} color={colors.primary} />
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Future Features</Text>
+        </View>
+
+        <View style={styles.plannedGrid}>
+          {PLANNED_ITEMS.map((item, index) => (
+            <PlannedItem key={index} {...item} colors={colors} />
+          ))}
         </View>
       </View>
 
@@ -144,9 +124,9 @@ function PlannedItem({ icon, title, description, color, bgColor, colors }) {
     <View style={[
       styles.plannedItem,
       {
-    // backgroundColor handled inline
-    // borderColor handled inline
-    // shadowColor handled inline
+        // backgroundColor handled inline
+        // borderColor handled inline
+        // shadowColor handled inline
       }
     ]}>
       <View style={[styles.plannedIconCircle, { backgroundColor: bgColor }]}>
@@ -170,152 +150,139 @@ const styles = StyleSheet.create({
   },
 
   // ─── Hero ──────────────────────────────────────────────────
-  heroSection: {
+  premiumHero: {
     alignItems: "center",
-    paddingTop: spacing.xxxl + 8,
-    paddingBottom: spacing.xxl,
+    paddingTop: spacing.xxxl,
+    paddingBottom: spacing.xl,
     paddingHorizontal: spacing.xxxl,
   },
-  iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    // backgroundColor handled inline
+  mainIconCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.xl,
-    borderWidth: 2,
-    // borderColor handled inline
+    marginBottom: spacing.lg,
+    borderWidth: 1.5,
   },
-  title: {
-    fontSize: 28,
+  premiumTitle: {
+    fontSize: 26,
     fontWeight: "800",
-    // color handled inline
     textAlign: "center",
-    marginBottom: spacing.md,
-    letterSpacing: 0.3,
+    marginBottom: spacing.sm,
+    letterSpacing: -0.5,
   },
-  comingSoonBadge: {
+  modernBadge: {
     flexDirection: "row",
     alignItems: "center",
-    // backgroundColor handled inline
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: spacing.chipRadius,
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    // borderColor handled inline
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 6,
+    marginBottom: spacing.lg,
   },
-  comingSoonText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    // color handled inline
-    letterSpacing: 0.5,
+  modernBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
     textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  description: {
-    fontSize: typography.fontSize.md + 1,
-    fontWeight: typography.fontWeight.regular,
-    // color handled inline
+  premiumDescription: {
+    fontSize: 15,
+    fontWeight: "500",
     textAlign: "center",
     lineHeight: 22,
-    maxWidth: 300,
+    maxWidth: 280,
   },
 
   // ─── Section ───────────────────────────────────────────────
   section: {
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.lg,
   },
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    marginBottom: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   sectionIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   sectionTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    // color handled inline
+    fontSize: 18,
+    fontWeight: "700",
     letterSpacing: 0.2,
   },
 
   // ─── Planned Items ─────────────────────────────────────────
+  plannedGrid: {
+    gap: spacing.md,
+  },
   plannedItem: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    // backgroundColor handled inline
-    borderRadius: spacing.cardRadius,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    // borderColor handled inline
-    elevation: 2,
-    // shadowColor handled inline
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
+    alignItems: "center",
+    padding: spacing.md,
+    marginBottom: 0,
   },
   plannedIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: spacing.lg,
+    marginRight: spacing.md,
   },
   plannedTextContainer: {
     flex: 1,
   },
   plannedTitle: {
-    fontSize: typography.fontSize.md + 1,
-    fontWeight: typography.fontWeight.bold,
-    // color handled inline
-    marginBottom: spacing.xs,
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 1,
   },
   plannedDescription: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.regular,
-    // color handled inline
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
   },
 
   // ─── Contribute Card ───────────────────────────────────────
-  contributeCard: {
-    // backgroundColor handled inline
-    borderRadius: spacing.cardRadius + 2,
-    padding: spacing.xl + 4,
+  premiumContributeCard: {
+    borderRadius: 20,
+    padding: spacing.xl,
     alignItems: "center",
     borderWidth: 1,
-    // borderColor handled inline
     elevation: 2,
-    // shadowColor handled inline
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  contributeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
   contributeTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    // color handled inline
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: spacing.xs,
     textAlign: "center",
   },
   contributeText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.regular,
-    // color handled inline
+    fontSize: 14,
+    fontWeight: "500",
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 20,
+    paddingHorizontal: spacing.sm,
   },
 
   // ─── Decorative Dots ───────────────────────────────────────
@@ -324,26 +291,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
-    marginTop: spacing.xxxl,
+    marginTop: spacing.giant,
     paddingBottom: spacing.xl,
   },
   dot: {
     borderRadius: 50,
-    // backgroundColor handled inline
   },
   dotSmall: {
     width: 4,
     height: 4,
-    opacity: 0.3,
+    opacity: 0.2,
   },
   dotMedium: {
     width: 6,
     height: 6,
-    opacity: 0.5,
+    opacity: 0.4,
   },
   dotLarge: {
     width: 8,
     height: 8,
-    opacity: 0.7,
+    opacity: 0.6,
   },
 });

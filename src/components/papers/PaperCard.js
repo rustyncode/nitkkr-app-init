@@ -6,16 +6,19 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Animated,
+  Linking,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { spacing, typography } from "../../theme/spacing";
-import { downloadAndOpen, formatFileSize } from "../../utils/download";
-import * as FileSystem from "expo-file-system/legacy";
+import { downloadAndOpen, formatFileSize, isFileDownloaded } from "../../utils/download";
+import * as FileSystem from "expo-file-system";
 import {
   notifyDownloadComplete,
   notifyDownloadFailed,
 } from "../../utils/notifications";
+import { toggleBookmark, isBookmarked } from "../../services/bookmarkService";
 
 // ─── Exam type badge config ──────────────────────────────────
 
@@ -85,25 +88,35 @@ export default function PaperCard({ paper, index }) {
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloaded, setIsDownloaded] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  // Check if file is already downloaded
+  // Check if file is already downloaded using utility
   useEffect(() => {
     const checkDownloadStatus = async () => {
-      try {
-        const filePath = `${FileSystem.documentDirectory}pyq_downloads/${constructedFileName || 'temp.pdf'}`;
-        const fileInfo = await FileSystem.getInfoAsync(filePath);
-        setIsDownloaded(fileInfo.exists && fileInfo.size > 0);
-      } catch (error) {
-        setIsDownloaded(false);
-      }
+      const downloaded = await isFileDownloaded(constructedFileName);
+      setIsDownloaded(downloaded);
     };
 
     if (constructedFileName) {
       checkDownloadStatus();
     }
   }, [constructedFileName]);
+
+  // Check bookmark status
+  useEffect(() => {
+    const checkBookmark = async () => {
+      setBookmarked(await isBookmarked("papers", paper.id));
+    };
+    checkBookmark();
+  }, [paper.id]);
+
+  const handleBookmarkToggle = async () => {
+    const added = await toggleBookmark("papers", paper);
+    setBookmarked(added);
+  };
 
   if (!paper) return null;
 
@@ -162,9 +175,9 @@ export default function PaperCard({ paper, index }) {
         ? "image"
         : "document";
 
-  // ─── Download handler ──────────────────────────────────────
+  // ─── Actions ────────────────────────────────────────────────
 
-  const handleDownload = useCallback(async () => {
+  const handlePress = useCallback(async () => {
     if (downloading) return;
 
     // Press animation
@@ -181,53 +194,39 @@ export default function PaperCard({ paper, index }) {
       }),
     ]).start();
 
+    let url = downloadUrl || paper.pdf_url || paper.pdfUrl;
+    if (url && !url.startsWith("http")) {
+      const baseUrl = config.API_URL.replace("/api/v1", "");
+      url = `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+    }
+
+    if (!url) {
+      Alert.alert("Error", "No download link available for this paper.");
+      return;
+    }
+
     setDownloading(true);
     setDownloadProgress(0);
 
     try {
-      // Ensure we have valid data to construct fileName
-      if (!paper || !paper.examType || !paper.year) {
-        Alert.alert("Error", "Paper information is incomplete. Cannot download.");
-        setDownloading(false);
-        return;
-      }
-
-      // Construct fileName from available paper data
-      const code = paper.subjectCode || paper.code || "UNKNOWN";
-      const examTypeShort = examConfig.shortLabel.replace(/\s/g, ''); // Use short label, remove spaces
-      const year = paper.year || new Date().getFullYear();
-      const sessionShort = paper.session ? paper.session.substring(0, 3) : "UNK"; // e.g., "Dec" or "May"
-
-      const constructedFileName = `${code}-${examTypeShort}-${year}-${sessionShort}.pdf`;
-      const downloadUrl = paper.downloadUrl || paper.pdf_url || paper.url; // Use existing downloadUrl first, then fallbacks
-
-      if (!downloadUrl) {
-        Alert.alert("Download Error", "No download URL available for this paper.");
-        setDownloading(false);
-        return;
-      }
-
       const success = await downloadAndOpen(
-        downloadUrl,
-        constructedFileName, // Use the newly constructed file name
+        url,
+        constructedFileName,
         (progress) => {
           setDownloadProgress(progress.progress || 0);
         },
       );
 
       if (success) {
-        notifyDownloadComplete(constructedFileName);
-      } else {
-        notifyDownloadFailed(constructedFileName);
+        setIsDownloaded(true);
       }
     } catch (err) {
-      console.error("[PaperCard] Download error:", err.message);
-      notifyDownloadFailed(fileName || "file.pdf"); // Fallback to fileName or generic name
+      console.error("[PaperCard] Press error:", err.message);
     } finally {
       setDownloading(false);
       setDownloadProgress(0);
     }
-  }, [downloading, downloadUrl, fileName, scaleAnim]);
+  }, [downloading, downloadUrl, paper.pdf_url, paper.pdfUrl, constructedFileName, scaleAnim]);
 
   // ─── Render ────────────────────────────────────────────────
 
@@ -246,7 +245,7 @@ export default function PaperCard({ paper, index }) {
                 <Text style={[styles.subjectCode, { color: colors.textPrimary }]} numberOfLines={1}>
                   {subjectCode || "—"}
                 </Text>
-                {/* Subject Name (smaller, below code) */}
+                {/* Subject Name (Full) */}
                 {subjectName ? (
                   <Text style={[styles.subjectName, { color: colors.textSecondary }]} numberOfLines={1}>
                     {subjectName}
@@ -254,18 +253,16 @@ export default function PaperCard({ paper, index }) {
                 ) : null}
               </View>
 
-              {/* Year badge */}
-              <View style={[styles.yearBadge, { backgroundColor: colors.primaryFaded, borderColor: colors.primaryLight + "30" }]}>
+              <TouchableOpacity onPress={handleBookmarkToggle} style={styles.bookmarkBtn}>
                 <Ionicons
-                  name="calendar-outline"
-                  size={13}
-                  color={colors.primary}
+                  name={bookmarked ? "bookmark" : "bookmark-outline"}
+                  size={20}
+                  color={bookmarked ? colors.primary : colors.textTertiary}
                 />
-                <Text style={[styles.yearText, { color: colors.primary }]}>{year || "—"}</Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
-            {/* ─── Badges Row: Exam type, midsem, category ──────── */}
+            {/* ─── Badges Row: Exam type, Year, File ────────── */}
             <View style={styles.badgesRow}>
               {/* Exam type badge */}
               <View style={[styles.examBadge, { backgroundColor: examConfig.bg }]}>
@@ -280,21 +277,11 @@ export default function PaperCard({ paper, index }) {
                 </Text>
               </View>
 
-              {/* Category badge */}
-              {catConfig && (
-                <View style={[styles.catBadge, { backgroundColor: catConfig.bg }]}>
-                  <Text style={[styles.catBadgeText, { color: catConfig.text }]}>
-                    {catConfig.label}
-                  </Text>
-                </View>
-              )}
-
-              {/* Session badge */}
-              {detailText ? (
-                <View style={styles.sessionBadge}>
-                  <Text style={styles.sessionText}>{detailText}</Text>
-                </View>
-              ) : null}
+              {/* Year badge */}
+              <View style={[styles.yearBadge, { backgroundColor: colors.surfaceAlt, borderColor: colors.borderLight }]}>
+                <Ionicons name="calendar-outline" size={12} color={colors.textTertiary} />
+                <Text style={[styles.yearBadgeText, { color: colors.textSecondary }]}>{year || "—"}</Text>
+              </View>
 
               {/* File type indicator */}
               <View style={[styles.fileTypeBadge, { backgroundColor: colors.surfaceAlt }]}>
@@ -304,61 +291,28 @@ export default function PaperCard({ paper, index }) {
                 </Text>
               </View>
             </View>
-
-            {/* ─── Department & Info Row ─────────────────────────── */}
-            <View style={styles.infoRow}>
-              <View style={styles.infoItem}>
-                <Ionicons
-                  name="school-outline"
-                  size={14}
-                  color={colors.textSecondary}
-                />
-                <Text style={[styles.infoText, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {deptShort}
-                </Text>
-              </View>
-
-              {sizeText && (
-                <View style={styles.infoItem}>
-                  <Ionicons
-                    name="cloud-outline"
-                    size={14}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={[styles.infoText, { color: colors.textSecondary }]}>{sizeText}</Text>
-                </View>
-              )}
-            </View>
           </View>
 
-          {/* Right Content - Download Button */}
+          {/* Right Content - Consolidated Action Buttons */}
           <View style={styles.rightButtonArea}>
-
-            {/* Download button */}
             <TouchableOpacity
-              onPress={handleDownload}
+              onPress={handlePress}
               disabled={downloading}
-              activeOpacity={0.7}
               style={[
-                styles.downloadButton,
-                { backgroundColor: colors.primary, shadowColor: colors.primary },
-                downloading && { backgroundColor: colors.primaryLight },
+                styles.previewBtn,
+                { backgroundColor: isDownloaded ? colors.featureGreen : colors.primary },
+                downloading && { opacity: 0.7 }
               ]}
             >
               {downloading ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : isDownloaded ? (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={24}
-                  color={colors.white}
-                />
+                <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Ionicons
-                  name="download-outline"
-                  size={24}
-                  color={colors.white}
-                />
+                <>
+                  <Ionicons name={isDownloaded ? "eye-outline" : "book-outline"} size={16} color="#FFF" />
+                  <Text style={styles.previewBtnText}>
+                    {isDownloaded ? "OPEN" : "PREVIEW"}
+                  </Text>
+                </>
               )}
             </TouchableOpacity>
           </View>
@@ -403,17 +357,19 @@ const styles = StyleSheet.create({
 
   cardContainer: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: spacing.md,
   },
 
   leftContentArea: {
     flex: 1,
+    paddingRight: 4,
   },
 
   rightButtonArea: {
     justifyContent: "center",
     alignItems: "center",
+    minWidth: 90,
   },
 
   // ─── Top row ────────────────────────────────────────────────
@@ -428,6 +384,10 @@ const styles = StyleSheet.create({
   topLeft: {
     flex: 1,
     marginRight: spacing.sm,
+  },
+  bookmarkBtn: {
+    padding: 6,
+    marginLeft: 8,
   },
 
   subjectCode: {
@@ -567,59 +527,43 @@ const styles = StyleSheet.create({
 
   // ─── Download button ───────────────────────────────────────
 
-  downloadButton: {
-    flexDirection: "column",
+  // ─── Refactored Styles ───────────────────────────────────
+
+  previewBtn: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing.sm,
+    height: 38,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
+    minWidth: 90,
+  },
+
+  previewBtnText: {
+    color: "#FFF",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+
+  yearBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderRadius: 12,
-    width: 64,
-    height: 64,
-    // backgroundColor: colors.primary, // handled inline
-    // shadowColor: colors.primary, // handled inline
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: spacing.chipRadius - 6,
+    gap: 4,
+    borderWidth: 1,
   },
 
-  downloadButtonActive: {
-    // backgroundColor: colors.primaryLight, // handled inline
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-
-  downloadContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm - 2,
-  },
-
-  downloadText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
-    // color: colors.white, // handled inline
-    letterSpacing: typography.letterSpacing.wide,
-  },
-
-  downloadingContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-
-  progressText: {
+  yearBadgeText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.bold,
-    // color: colors.white, // handled inline
   },
-
-  // ─── Progress bar ──────────────────────────────────────────
 
   progressBarContainer: {
     height: 3,
-    // backgroundColor: colors.borderLight, // handled inline
     borderRadius: 2,
     marginTop: spacing.sm + 2,
     overflow: "hidden",
@@ -627,7 +571,6 @@ const styles = StyleSheet.create({
 
   progressBarFill: {
     height: "100%",
-    // backgroundColor: colors.accent, // handled inline
     borderRadius: 2,
   },
 });

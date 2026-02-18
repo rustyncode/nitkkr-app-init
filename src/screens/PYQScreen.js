@@ -7,8 +7,9 @@ import SyncStatusBar from "../components/common/SyncStatusBar";
 import PaperList from "../components/papers/PaperList";
 import usePapers from "../hooks/usePapers";
 import { useTheme } from "../context/ThemeContext";
+import LoadingOverlay from "../components/common/LoadingOverlay";
 
-export default function PYQScreen() {
+export default function PYQScreen({ route }) {
   const { colors } = useTheme();
 
   // ─── Data hook ──────────────────────────────────────────────
@@ -33,7 +34,8 @@ export default function PYQScreen() {
     resetAll,
     loadPapers,
     syncStatus,
-  } = usePapers();
+    suggestions,
+  } = usePapers(route?.params?.searchQuery);
 
   // ─── Filter bar expand/collapse ─────────────────────────────
   const [filtersExpanded, setFiltersExpanded] = useState(false);
@@ -73,6 +75,10 @@ export default function PYQScreen() {
           onChangeText={setSearchQuery}
           onClear={clearSearch}
           placeholder="Search subject, code, department..."
+          suggestions={suggestions}
+          onSuggestionPress={(suggestion) => {
+            setSearchQuery(suggestion.code);
+          }}
         />
 
         {/* Filter Bar */}
@@ -104,6 +110,7 @@ export default function PYQScreen() {
         // ListHeaderComponent is now null (or we could pass a small spacer)
         ListHeaderComponent={null}
       />
+      <LoadingOverlay visible={loading && !refreshing && papers.length === 0} message="Loading Papers..." />
     </View>
   );
 }
