@@ -195,8 +195,9 @@ export default function PaperCard({ paper, index }) {
     ]).start();
 
     let url = downloadUrl || paper.pdf_url || paper.pdfUrl;
-    if (url && !url.startsWith("http")) {
-      const baseUrl = config.API_URL.replace("/api/v1", "");
+    if (url && typeof url === "string" && !url.startsWith("http")) {
+      // Use API_BASE_URL and remove the /api/v1 suffix to get the backend root
+      const baseUrl = config.API_BASE_URL ? config.API_BASE_URL.replace("/api/v1", "") : "";
       url = `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
     }
 

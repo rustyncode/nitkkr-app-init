@@ -70,43 +70,38 @@ export default function JobsScreen() {
     );
   }, [jobs, searchQuery]);
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.titleRow}>
-        <View>
-          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Jobs & Careers</Text>
-          {lastFetched && (
-            <Text style={styles.lastFetchedText}>
-              Synced: {new Date(lastFetched).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
-          )}
-        </View>
-      </View>
-      <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>
-        Find your next opportunity at top MNCs
-      </Text>
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder="Search title, company or location..."
-        onClear={() => setSearchQuery("")}
-      />
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-        </View>
-      )}
-    </View>
-  );
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+      {/* Stable Header Section (outside FlatList to preserve focus) */}
+      <View style={styles.listHeader}>
+        <View style={styles.titleRow}>
+          <View>
+            <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Jobs & Careers</Text>
+            {lastFetched && (
+              <Text style={styles.lastFetchedText}>
+                Synced: {new Date(lastFetched).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            )}
+          </View>
+        </View>
+        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>
+          Find your next opportunity at top MNCs
+        </Text>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search title, company or location..."
+          onClear={() => setSearchQuery("")}
+        />
+      </View>
+
       <FlatList
         data={filteredJobs}
         keyExtractor={(item, index) => item.id || index.toString()}
         contentContainerStyle={styles.contentContainer}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={null}
         renderItem={({ item }) => <JobCard job={item} />}
         refreshControl={
           <RefreshControl
@@ -136,6 +131,13 @@ export default function JobsScreen() {
         ListFooterComponent={<View style={{ height: 100 }} />}
         showsVerticalScrollIndicator={false}
       />
+
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        </View>
+      )}
+
       <LoadingOverlay visible={loading && !refreshing && jobs.length === 0} message="Syncing Opportunities..." />
     </View>
   );
@@ -148,38 +150,28 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingBottom: spacing.xxl,
   },
-  header: {
+  listHeader: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
     paddingBottom: spacing.md,
+    zIndex: 10,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  screenTitle: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.black,
-    letterSpacing: -0.5,
-  },
-  screenSubtitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    marginBottom: spacing.md,
-    opacity: 0.8,
-  },
-  lastFetchedText: {
-    fontSize: 10,
-    fontWeight: typography.fontWeight.regular,
-    color: "#888",
-    marginTop: 2,
-  },
-  errorContainer: {
-    marginTop: spacing.md,
+  errorBanner: {
+    position: 'absolute',
+    bottom: spacing.xxl + 20,
+    left: spacing.lg,
+    right: spacing.lg,
     padding: spacing.md,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 0, 0, 0.05)",
+    backgroundColor: "rgba(255, 0, 0, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 0, 0, 0.2)",
+    alignItems: "center",
   },
   errorText: {
     fontSize: typography.fontSize.sm,

@@ -374,22 +374,26 @@ export default function usePapers(initialSearchQuery = "") {
 
     // Suggestions
     suggestions: useMemo(() => {
-      if (!searchQuery || searchQuery.length < 2) return [];
+      if (!searchQuery || typeof searchQuery !== "string" || searchQuery.length < 2) return [];
       const query = searchQuery.toLowerCase().trim();
       const uniqueSubjects = new Map();
 
       allPapers.forEach(p => {
-        if (!p.subjectCode) return;
+        const sCode = p.subjectCode ? String(p.subjectCode) : "";
+        const sName = p.subjectName ? String(p.subjectName) : "";
+
+        if (!sCode && !sName) return;
+
         const score =
-          (p.subjectCode.toLowerCase().includes(query) ? 2 : 0) +
-          (p.subjectName?.toLowerCase().includes(query) ? 1 : 0);
+          (sCode.toLowerCase().includes(query) ? 2 : 0) +
+          (sName.toLowerCase().includes(query) ? 1 : 0);
 
         if (score > 0) {
-          const key = p.subjectCode;
+          const key = sCode || sName;
           if (!uniqueSubjects.has(key) || uniqueSubjects.get(key).score < score) {
             uniqueSubjects.set(key, {
-              code: p.subjectCode,
-              name: p.subjectName || "Unknown Subject",
+              code: sCode,
+              name: sName || "Unknown Subject",
               score
             });
           }

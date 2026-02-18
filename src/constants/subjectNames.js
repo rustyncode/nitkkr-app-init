@@ -324,7 +324,8 @@ for (const [code, name] of Object.entries(SUBJECT_NAMES)) {
  */
 export function getSubjectName(code) {
   if (!code) return null;
-  return SUBJECT_NAMES[code.toUpperCase()] || null;
+  const stringCode = String(code).toUpperCase();
+  return SUBJECT_NAMES[stringCode] || null;
 }
 
 /**
@@ -357,8 +358,10 @@ export function searchBySubjectName(query) {
  * @returns {boolean}
  */
 export function looksLikeSubjectName(query) {
-  if (!query || query.trim().length < 3) return false;
-  const trimmed = query.trim();
+  if (!query) return false;
+  const trimmed = String(query).trim();
+  if (trimmed.length < 3) return false;
+
   // Subject codes are typically 4-6 uppercase letters followed by digits
   const codePattern = /^[A-Z]{2,6}\d{2,3}$/i;
   // If it matches a code pattern, it's NOT a subject name

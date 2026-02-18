@@ -121,9 +121,19 @@ function MenuStack() {
 function MainAppContent() {
   const { colors, isDark } = useTheme();
 
-  const { status, newCount } = useNotificationTracker({
-    autoCheck: false,
+  const { status, newCount, refresh } = useNotificationTracker({
+    autoCheck: true,
   });
+
+  // Periodic polling (every 5 minutes) while app is active
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      console.log("[App] Periodic notification check...");
+      refresh();
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(pollInterval);
+  }, [refresh]);
 
   useEffect(() => {
     if (status === "new_found" && newCount > 0) {
