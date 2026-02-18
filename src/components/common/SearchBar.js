@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import {
   View,
+  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,

@@ -17,6 +17,7 @@
       "bundleIdentifier": "com.rustinet.app",
       "infoPlist": {
         "UIBackgroundModes": [
+          "remote-notification",
           "remote-notification"
         ],
         "NSPhotoLibraryAddUsageDescription": "RustiNet needs access to save files to your device."
@@ -30,6 +31,11 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
+        "CAMERA",
+        "NOTIFICATIONS",
+        "VIBRATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
         "CAMERA",
         "NOTIFICATIONS",
         "VIBRATE",
@@ -57,6 +63,12 @@
       "eas": {
         "projectId": "1f39e34d-a2b4-499d-8d7f-ad8b42ec9e68"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1f39e34d-a2b4-499d-8d7f-ad8b42ec9e68"
     }
   }
 }

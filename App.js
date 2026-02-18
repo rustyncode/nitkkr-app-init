@@ -26,6 +26,7 @@ import MenuScreen from "./src/screens/MenuScreen";
 import AboutScreen from "./src/screens/AboutScreen";
 import Header from "./src/components/common/Header";
 import SplashScreen from "./src/screens/SplashScreen";
+import GlobalErrorBoundary from "./src/components/common/GlobalErrorBoundary";
 
 import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
 import useNotificationTracker from "./src/hooks/useNotificationTracker";
@@ -238,7 +239,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <MainAppContent />
+        <GlobalErrorBoundary>
+          <MainAppContent />
+        </GlobalErrorBoundary>
       </ThemeProvider>
     </SafeAreaProvider>
   );

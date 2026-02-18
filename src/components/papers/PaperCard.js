@@ -139,9 +139,11 @@ export default function PaperCard({ paper, index }) {
 
   // Construct proper filename from paper data
   const code = subjectCode || "PAPER";
-  const examTypeShort = examType ? examType.replace(/\s/g, '').substring(0, 6) : "EXAM";
+  const examTypeStr = String(examType || "");
+  const examTypeShort = examTypeStr ? examTypeStr.replace(/\s/g, '').substring(0, 6) : "EXAM";
   const yearShort = year || new Date().getFullYear();
-  const sessionShort = session ? session.substring(0, 3) : "";
+  const sessionStr = String(session || "");
+  const sessionShort = sessionStr ? sessionStr.substring(0, 3) : "";
   const constructedFileName = `${code}-${examTypeShort}${midsemNumber || ""}-${yearShort}${sessionShort ? `-${sessionShort}` : ""}.pdf`;
 
   const EXAM_BADGE_CONFIG = getExamBadgeConfig(colors);
@@ -150,7 +152,8 @@ export default function PaperCard({ paper, index }) {
   const examConfig =
     EXAM_BADGE_CONFIG[examType] || EXAM_BADGE_CONFIG["End Semester"];
   const catConfig = CATEGORY_BADGE_CONFIG[category] || null;
-  const deptShort = DEPT_SHORT[department] || department || "—";
+  const deptString = String(department || "");
+  const deptShort = DEPT_SHORT[deptString] || deptString || "—";
 
   // Build midsem label
   let midsemLabel = "";
@@ -168,10 +171,11 @@ export default function PaperCard({ paper, index }) {
   const sizeText = fileSizeKB ? formatFileSize(fileSizeKB * 1024) : null;
 
   // File type icon
+  const fileExtStr = String(fileExtension || "pdf");
   const fileIcon =
-    fileExtension === "pdf"
+    fileExtStr === "pdf"
       ? "document-text"
-      : ["jpg", "jpeg", "png"].includes(fileExtension)
+      : ["jpg", "jpeg", "png"].includes(fileExtStr)
         ? "image"
         : "document";
 
@@ -288,7 +292,7 @@ export default function PaperCard({ paper, index }) {
               <View style={[styles.fileTypeBadge, { backgroundColor: colors.surfaceAlt }]}>
                 <Ionicons name={fileIcon} size={11} color={colors.textTertiary} />
                 <Text style={[styles.fileTypeText, { color: colors.textTertiary }]}>
-                  {(fileExtension || "pdf").toUpperCase()}
+                  {fileExtStr.toUpperCase()}
                 </Text>
               </View>
             </View>
