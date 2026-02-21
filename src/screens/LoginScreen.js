@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet,
     View,
@@ -9,24 +9,78 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
-    Image
+    Image,
+    Dimensions
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { auth } from '../config/firebase';
 import {
-    sendSignInLinkToEmail,
     GoogleAuthProvider,
     signInWithCredential
 } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const LoginScreen = () => {
     const { colors, isDark } = useTheme();
     const { sendOtp, verifyOtp } = useAuth();
+
+
+    const redirectUri = makeRedirectUri();
+
+    // Log the EXACT redirect URI so we can see it in terminal
+    console.log('[DEBUG] Exact Redirect URI:', redirectUri);
+
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+        prompt: 'select_account',
+        redirectUri: 'https://auth.expo.io/@jaiyankargupta/rustinet'
+    });
+
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { id_token } = response.params;
+            const credential = GoogleAuthProvider.credential(id_token);
+            setGoogleLoading(true);
+
+            const authenticate = async () => {
+                try {
+                    const userCredential = await signInWithCredential(auth, credential);
+                    const email = userCredential.user?.email;
+                    if (!email || !email.endsWith('@nitkkr.ac.in')) {
+                        await auth.signOut();
+                        Alert.alert('Login Failed', 'Please use your valid @nitkkr.ac.in email address.');
+                    }
+                } catch (err) {
+                    console.error('[GoogleLogin] Firebase error:', err);
+                    Alert.alert('Login Failed', 'Failed to sync with Firebase.');
+                } finally {
+                    setGoogleLoading(false);
+                }
+            };
+
+            authenticate();
+        } else if (response?.type === 'error' || response?.type === 'dismiss') {
+            setGoogleLoading(false);
+        }
+    }, [response]);
+
     const [rollNumber, setRollNumber] = useState('');
-    const [otpCode, setOtpCode] = useState('');
-    const [loading, setLoading] = useState(false);
+
+    const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
+    const otpRefs = useRef([]);
+    const [otpLoading, setOtpLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [stage, setStage] = useState('identify'); // 'identify' or 'verify'
     const [timer, setTimer] = useState(0);
 
@@ -43,6 +97,27 @@ const LoginScreen = () => {
         }, 1000);
     };
 
+    const handleOtpChange = (text, index) => {
+        // Only allow numbers
+        const cleanText = text.replace(/[^0-9]/g, '');
+
+        const newOtp = [...otpCode];
+        newOtp[index] = cleanText;
+        setOtpCode(newOtp);
+
+        // Auto-advance to next box if filled
+        if (cleanText && index < 5) {
+            otpRefs.current[index + 1]?.focus();
+        }
+    };
+
+    const handleOtpKeyPress = (e, index) => {
+        if (e.nativeEvent.key === 'Backspace' && !otpCode[index] && index > 0) {
+            // Auto backtrack on empty backspace
+            otpRefs.current[index - 1]?.focus();
+        }
+    };
+
     const handleSendOtp = async () => {
         if (!rollNumber || rollNumber.length < 8) {
             Alert.alert('Invalid Roll Number', 'Please enter a valid NIT KKR Roll Number (e.g. 12212236).');
@@ -50,7 +125,7 @@ const LoginScreen = () => {
         }
 
         const email = `${rollNumber}@nitkkr.ac.in`;
-        setLoading(true);
+        setOtpLoading(true);
         try {
             const result = await sendOtp(email);
             if (result.success) {
@@ -64,18 +139,19 @@ const LoginScreen = () => {
             console.error('[Login] OTP send failed:', error);
             Alert.alert('Error', 'Something went wrong. Please check your internet.');
         } finally {
-            setLoading(false);
+            setOtpLoading(false);
         }
     };
 
     const handleVerifyOtp = async () => {
-        if (!otpCode || otpCode.length !== 6) {
+        const code = otpCode.join('');
+        if (code.length !== 6) {
             Alert.alert('Invalid Code', 'Please enter the 6-digit code sent to your email.');
             return;
         }
 
         const email = `${rollNumber}@nitkkr.ac.in`;
-        setLoading(true);
+        setOtpLoading(true);
         try {
             const result = await verifyOtp(email, otpCode);
             if (!result.success) {
@@ -85,12 +161,18 @@ const LoginScreen = () => {
             console.error('[Login] Verification failed:', error);
             Alert.alert('Error', 'Verification failed. Please try again.');
         } finally {
-            setLoading(false);
+            setOtpLoading(false);
         }
     };
 
     const handleGoogleLogin = async () => {
-        Alert.alert('Google Sign-In', 'This feature requires native configuration. Please use Roll Number login for now.');
+        setGoogleLoading(true);
+        try {
+            await promptAsync();
+        } catch (error) {
+            console.error('[GoogleLogin] Prompt failed:', error);
+            setGoogleLoading(false);
+        }
     };
 
     return (
@@ -132,9 +214,9 @@ const LoginScreen = () => {
                             <TouchableOpacity
                                 style={[styles.loginButton, { backgroundColor: colors.primary }]}
                                 onPress={handleSendOtp}
-                                disabled={loading}
+                                disabled={otpLoading}
                             >
-                                {loading ? (
+                                {otpLoading ? (
                                     <ActivityIndicator color="white" />
                                 ) : (
                                     <Text style={styles.loginButtonText}>Send Verification Code</Text>
@@ -148,25 +230,32 @@ const LoginScreen = () => {
                                 Enter the 6-digit code sent to {rollNumber}@nitkkr.ac.in
                             </Text>
 
-                            <View style={styles.inputWrapper}>
-                                <Ionicons name="keypad-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                                <TextInput
-                                    style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
-                                    placeholder="Enter 6-digit Code"
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={otpCode}
-                                    onChangeText={setOtpCode}
-                                    keyboardType="number-pad"
-                                    maxLength={6}
-                                />
+                            <View style={styles.otpContainer}>
+                                {otpCode.map((digit, index) => (
+                                    <TextInput
+                                        key={index}
+                                        ref={(ref) => otpRefs.current[index] = ref}
+                                        style={[
+                                            styles.otpBox,
+                                            { color: colors.textPrimary, borderColor: colors.border },
+                                            digit ? { borderColor: colors.primary, backgroundColor: isDark ? '#232d4b' : '#e2e8f0' } : {}
+                                        ]}
+                                        value={digit}
+                                        onChangeText={(text) => handleOtpChange(text, index)}
+                                        onKeyPress={(e) => handleOtpKeyPress(e, index)}
+                                        keyboardType="number-pad"
+                                        maxLength={1}
+                                        selectTextOnFocus
+                                    />
+                                ))}
                             </View>
 
                             <TouchableOpacity
                                 style={[styles.loginButton, { backgroundColor: colors.primary }]}
                                 onPress={handleVerifyOtp}
-                                disabled={loading}
+                                disabled={otpLoading}
                             >
-                                {loading ? (
+                                {otpLoading ? (
                                     <ActivityIndicator color="white" />
                                 ) : (
                                     <Text style={styles.loginButtonText}>Verify & Login</Text>
@@ -203,9 +292,16 @@ const LoginScreen = () => {
                     <TouchableOpacity
                         style={[styles.googleButton, { borderColor: colors.border }]}
                         onPress={handleGoogleLogin}
+                        disabled={googleLoading}
                     >
-                        <Ionicons name="logo-google" size={20} color="#DB4437" />
-                        <Text style={[styles.googleButtonText, { color: colors.textPrimary }]}>Sign in with Google</Text>
+                        {googleLoading ? (
+                            <ActivityIndicator color={colors.textPrimary} />
+                        ) : (
+                            <>
+                                <Ionicons name="logo-google" size={20} color="#DB4437" />
+                                <Text style={[styles.googleButtonText, { color: colors.textPrimary }]}>Sign in with Google</Text>
+                            </>
+                        )}
                     </TouchableOpacity>
                 </View>
 
@@ -225,20 +321,22 @@ const styles = StyleSheet.create({
     },
     inner: {
         flex: 1,
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         padding: 24,
+        paddingTop: 120, // Increased top margin
+        paddingBottom: 40, // Ensure bottom has some breathing space
     },
     logoContainer: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 20,
     },
     logoCircle: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: 70,
+        height: 70,
+        borderRadius: 35,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 10,
         elevation: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
@@ -246,17 +344,17 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
     },
     title: {
-        fontSize: 32,
+        fontSize: 24,
         fontWeight: '800',
         letterSpacing: 1,
     },
     subtitle: {
-        fontSize: 16,
-        marginTop: 4,
+        fontSize: 12,
+        marginTop: 2,
         opacity: 0.8,
     },
     card: {
-        padding: 24,
+        padding: 20,
         borderRadius: 24,
         elevation: 4,
         shadowOffset: { width: 0, height: 2 },
@@ -264,18 +362,18 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
     },
     cardTitle: {
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: '700',
         marginBottom: 4,
     },
     cardSubtitle: {
-        fontSize: 14,
-        marginBottom: 24,
+        fontSize: 13,
+        marginBottom: 20,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
         position: 'relative',
     },
     inputIcon: {
@@ -285,14 +383,30 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        height: 56,
+        height: 50,
         borderWidth: 1.5,
         borderRadius: 16,
         paddingHorizontal: 48,
         fontSize: 16,
     },
-    loginButton: {
+    otpContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 24,
+        marginTop: 8,
+    },
+    otpBox: {
+        width: 48,
         height: 56,
+        borderWidth: 1.5,
+        borderRadius: 12,
+        fontSize: 24,
+        fontWeight: '700',
+        textAlign: 'center',
+        backgroundColor: 'transparent',
+    },
+    loginButton: {
+        height: 50,
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
@@ -307,7 +421,7 @@ const styles = StyleSheet.create({
     dividerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: 24,
+        marginVertical: 20,
     },
     divider: {
         flex: 1,
@@ -320,7 +434,7 @@ const styles = StyleSheet.create({
     },
     googleButton: {
         flexDirection: 'row',
-        height: 56,
+        height: 50,
         borderRadius: 16,
         borderWidth: 1.5,
         justifyContent: 'center',

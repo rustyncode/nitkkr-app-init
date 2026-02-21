@@ -33,6 +33,16 @@ const OnboardingScreen = () => {
     const [semester, setSemester] = useState('');
     const [branch, setBranch] = useState('');
 
+    React.useEffect(() => {
+        const getPermission = async () => {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                console.warn('[Onboarding] Location permission not granted');
+            }
+        };
+        getPermission();
+    }, []);
+
     const captureLocation = async () => {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
