@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, Text, Platform, LogBox } from "react-native";
+import { StyleSheet, View, Text, Platform, LogBox, ActivityIndicator } from "react-native";
 
 // Suppress expected warnings in Expo Go
 LogBox.ignoreLogs([
@@ -29,8 +29,13 @@ import SplashScreen from "./src/screens/SplashScreen";
 import GlobalErrorBoundary from "./src/components/common/GlobalErrorBoundary";
 
 import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
+import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import useNotificationTracker from "./src/hooks/useNotificationTracker";
 import * as ExpoSplashScreen from "expo-splash-screen";
+
+import LoginScreen from "./src/screens/LoginScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+import OnboardingScreen from "./src/screens/OnboardingScreen";
 
 // Prevent native splash screen from auto-hiding
 ExpoSplashScreen.preventAutoHideAsync().catch(() => {
@@ -96,8 +101,25 @@ function TabIcon({ route, focused }) {
   );
 }
 
-// ─── Menu Stack ──────────────────────────────────────────────
+// ─── Auth Stack ──────────────────────────────────────────────
+function AuthStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} />
+    </Stack.Navigator>
+  );
+}
 
+// ─── Onboarding Stack ─────────────────────────────────────────
+function OnboardingStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// ─── Profile Stack (In Menu) ─────────────────────────────────
 function MenuStack() {
   const { colors } = useTheme();
 
@@ -110,6 +132,7 @@ function MenuStack() {
       }}
     >
       <Stack.Screen name="MenuHome" component={MenuScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Bookmarks" component={BookmarksScreen} />
       <Stack.Screen name="Notes" component={NotesScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
@@ -121,6 +144,7 @@ function MenuStack() {
 
 function MainAppContent() {
   const { colors, isDark } = useTheme();
+  const { user, loading } = useAuth();
 
   const { status, newCount, refresh } = useNotificationTracker({
     autoCheck: true,
@@ -158,6 +182,14 @@ function MainAppContent() {
     },
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer theme={navigationTheme}>
       <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
@@ -169,54 +201,60 @@ function MainAppContent() {
 
         <View style={styles.safeArea}>
           <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
-            <Tab.Navigator
-              screenOptions={({ route }) => ({
-                headerShown: route.name !== "Home",
-                header: () => <Header />,
-                tabBarIcon: ({ focused }) => (
-                  <TabIcon
-                    route={route}
-                    focused={focused}
-                  />
-                ),
-                tabBarActiveTintColor: TAB_CONFIG[route.name]?.activeColor || colors.tabBarActive,
-                tabBarInactiveTintColor: colors.tabBarInactive,
-                tabBarStyle: [
-                  styles.tabBar,
-                  {
-                    backgroundColor: isDark ? colors.surface : "rgba(255, 255, 255, 0.97)",
-                    borderColor: colors.borderLight,
-                    shadowColor: colors.shadowDark
-                  }
-                ],
-                tabBarLabelStyle: styles.tabBarLabel,
-                tabBarItemStyle: styles.tabBarItem,
-                tabBarHideOnKeyboard: true,
-              })}
-            >
-              <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: "Home" }} />
-              <Tab.Screen name="PYQ" component={PYQScreen} options={{ tabBarLabel: "PYQ" }} />
-              <Tab.Screen name="Jobs" component={JobsScreen} options={{ tabBarLabel: "Jobs" }} />
-              <Tab.Screen name="Attendance" component={AttendanceScreen} options={{ tabBarLabel: "Attendance" }} />
-              <Tab.Screen
-                name="Menu"
-                component={MenuStack}
-                options={{ tabBarLabel: "More" }}
-                listeners={({ navigation }) => ({
-                  tabPress: (e) => {
-                    // Prevent default action
-                    e.preventDefault();
-                    // Reset the stack to the first screen and jump to it
-                    navigation.dispatch(
-                      CommonActions.reset({
-                        index: 0,
-                        routes: [{ name: "Menu", state: { routes: [{ name: "MenuHome" }] } }],
-                      })
-                    );
-                  },
+            {!user ? (
+              <AuthStack />
+            ) : !user.branch || !user.semester ? (
+              <OnboardingStack />
+            ) : (
+              <Tab.Navigator
+                screenOptions={({ route }) => ({
+                  headerShown: route.name !== "Home",
+                  header: () => <Header />,
+                  tabBarIcon: ({ focused }) => (
+                    <TabIcon
+                      route={route}
+                      focused={focused}
+                    />
+                  ),
+                  tabBarActiveTintColor: TAB_CONFIG[route.name]?.activeColor || colors.tabBarActive,
+                  tabBarInactiveTintColor: colors.tabBarInactive,
+                  tabBarStyle: [
+                    styles.tabBar,
+                    {
+                      backgroundColor: isDark ? colors.surface : "rgba(255, 255, 255, 0.97)",
+                      borderColor: colors.borderLight,
+                      shadowColor: colors.shadowDark
+                    }
+                  ],
+                  tabBarLabelStyle: styles.tabBarLabel,
+                  tabBarItemStyle: styles.tabBarItem,
+                  tabBarHideOnKeyboard: true,
                 })}
-              />
-            </Tab.Navigator>
+              >
+                <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: "Home" }} />
+                <Tab.Screen name="PYQ" component={PYQScreen} options={{ tabBarLabel: "PYQ" }} />
+                <Tab.Screen name="Jobs" component={JobsScreen} options={{ tabBarLabel: "Jobs" }} />
+                <Tab.Screen name="Attendance" component={AttendanceScreen} options={{ tabBarLabel: "Attendance" }} />
+                <Tab.Screen
+                  name="Menu"
+                  component={MenuStack}
+                  options={{ tabBarLabel: "More" }}
+                  listeners={({ navigation }) => ({
+                    tabPress: (e) => {
+                      // Prevent default action
+                      e.preventDefault();
+                      // Reset the stack to the first screen and jump to it
+                      navigation.dispatch(
+                        CommonActions.reset({
+                          index: 0,
+                          routes: [{ name: "Menu", state: { routes: [{ name: "MenuHome" }] } }],
+                        })
+                      );
+                    },
+                  })}
+                />
+              </Tab.Navigator>
+            )}
           </View>
         </View>
       </View>
@@ -238,11 +276,13 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <GlobalErrorBoundary>
-          <MainAppContent />
-        </GlobalErrorBoundary>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <GlobalErrorBoundary>
+            <MainAppContent />
+          </GlobalErrorBoundary>
+        </ThemeProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

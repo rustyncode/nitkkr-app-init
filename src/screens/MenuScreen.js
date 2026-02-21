@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 import { spacing, typography } from "../theme/spacing";
 import config from "../constants/config";
 
@@ -43,8 +44,32 @@ function MenuCard({ icon, title, subtitle, onPress, color, bgColor }) {
     );
 }
 
+function ProfileCard({ user, colors, onPress }) {
+    return (
+        <TouchableOpacity
+            style={[styles.profileCard, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
+            onPress={onPress}
+            activeOpacity={0.9}
+        >
+            <View style={styles.profileInfo}>
+                <View style={styles.avatarPlaceholder}>
+                    <Text style={styles.avatarText}>
+                        {user?.name?.charAt(0) || user?.roll_number?.charAt(0) || "S"}
+                    </Text>
+                </View>
+                <View style={styles.profileTextContainer}>
+                    <Text style={styles.userName}>{user?.name || "Student"}</Text>
+                    <Text style={styles.userRoll}>{user?.roll_number}</Text>
+                </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="white" opacity={0.8} />
+        </TouchableOpacity>
+    );
+}
+
 export default function MenuScreen({ navigation }) {
     const { colors, isDark } = useTheme();
+    const { user } = useAuth(); // Import useAuth to get user data
 
     const menuItems = [
         {
@@ -97,6 +122,12 @@ export default function MenuScreen({ navigation }) {
                     Access all features from one place
                 </Text>
             </View>
+
+            <ProfileCard
+                user={user}
+                colors={colors}
+                onPress={() => navigation.navigate("Profile")}
+            />
 
             <View style={styles.grid}>
                 {menuItems.map((item) => (
@@ -204,5 +235,49 @@ const styles = StyleSheet.create({
     infoText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.medium,
+    },
+    profileCard: {
+        marginHorizontal: spacing.screenHorizontal,
+        padding: spacing.lg,
+        borderRadius: 24,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: spacing.xl,
+        elevation: 12,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 15,
+    },
+    profileInfo: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.md,
+    },
+    avatarPlaceholder: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: "rgba(255, 255, 255, 0.25)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    avatarText: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "white",
+    },
+    profileTextContainer: {
+        gap: 2,
+    },
+    userName: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "white",
+    },
+    userRoll: {
+        fontSize: 14,
+        color: "rgba(255, 255, 255, 0.8)",
+        fontWeight: "600",
     },
 });
